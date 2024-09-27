@@ -15,7 +15,7 @@ String formatCurrency(double value) {
 class PortfolioDisplay2 extends StatelessWidget {
   final List<Map<String, dynamic>> portfolio;
 
-  const PortfolioDisplay2({super.key, required this.portfolio});
+  const PortfolioDisplay2({Key? key, required this.portfolio}) : super(key: key);
 
   // Méthode pour afficher les détails dans le BottomModalSheet
   void _showTokenDetails(BuildContext context, Map<String, dynamic> token) {
@@ -174,21 +174,21 @@ class PortfolioDisplay2 extends StatelessWidget {
                                     children: [
                                       const Text('Day'),
                                       Text(
-                                          formatCurrency(token['dailyIncome'] ?? 0)),
+                                          '${formatCurrency(token['dailyIncome'] ?? 0)}'),
                                     ],
                                   ),
                                   Column(
                                     children: [
                                       const Text('Month'),
                                       Text(
-                                          formatCurrency(token['monthlyIncome'] ?? 0)),
+                                          '${formatCurrency(token['monthlyIncome'] ?? 0)}'),
                                     ],
                                   ),
                                   Column(
                                     children: [
                                       const Text('Year'),
                                       Text(
-                                          formatCurrency(token['yearlyIncome'] ?? 0)),
+                                          '${formatCurrency(token['yearlyIncome'] ?? 0)}'),
                                     ],
                                   ),
                                 ],

@@ -71,6 +71,7 @@ class _ManageEthAddressesPageState extends State<ManageEthAddressesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Applique le background du thème
       appBar: AppBar(
         title: const Text('Manage Ethereum Addresses'),
       ),
@@ -115,7 +116,7 @@ class _ManageEthAddressesPageState extends State<ManageEthAddressesPage> {
                       onPressed: () {
                         _deleteAddress(index);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Address deleted')),
+                          SnackBar(content: Text('Address deleted')),
                         );
                       },
                     ),

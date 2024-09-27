@@ -1,182 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'api_service.dart';
+import 'data_manager.dart';
 
 class StatisticsPage extends StatefulWidget {
-  const StatisticsPage({super.key});
+  const StatisticsPage({Key? key}) : super(key: key);
 
   @override
   _StatisticsPageState createState() => _StatisticsPageState();
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-  List<Map<String, dynamic>> _rentData = [];
-  List<Map<String, dynamic>> _propertyData = []; // Pour le graphique en donut
-  bool _isLoading = true;
-  String _selectedPeriod = 'Semaine'; // Période par défaut
+  String _selectedPeriod = 'Semaine';
 
   @override
   void initState() {
     super.initState();
-    _fetchRentData();
-    _fetchPropertyData(); // Récupérer les données de la propriété pour le donut chart
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    dataManager.fetchRentData();
+    dataManager.fetchPropertyData();
   }
 
-  // Récupérer les données du loyer via l'API
-  Future<void> _fetchRentData() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      List<String> wallets = prefs.getStringList('ethAddresses') ?? [];
-      List<Map<String, dynamic>> rentData = await ApiService.fetchRentData(wallets);
-      setState(() {
-        _rentData = rentData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print("Error fetching rent data: $e");
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  // Récupérer les données de la propriété pour le donut chart
-  Future<void> _fetchPropertyData() async {
-    try {
-      // Récupérer les tokens depuis l'API
-      final walletTokens = await ApiService.fetchTokens();
-      final rmmTokens = await ApiService.fetchRMMTokens();
-      final realTokens = await ApiService.fetchRealTokens();
-
-      // Fusionner les tokens du portefeuille et du RMM
-      List<dynamic> allTokens = [...walletTokens[0]['balances'], ...rmmTokens];
-      List<Map<String, dynamic>> propertyData = [];
-
-      // Parcourir chaque token du portefeuille et du RMM
-      for (var token in allTokens) {
-        if (token != null && token['token'] != null && token['token']['address'] != null) {
-          final tokenAddress = token['token']['address'].toLowerCase();
-
-          // Correspondre avec les RealTokens
-          final matchingRealToken = realTokens.firstWhere(
-            (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-            orElse: () => null,
-          );
-
-          if (matchingRealToken != null && matchingRealToken['propertyType'] != null) {
-            final propertyType = matchingRealToken['propertyType'];
-
-            // Vérifiez si le type de propriété existe déjà dans propertyData
-            final existingPropertyType = propertyData.firstWhere(
-              (data) => data['propertyType'] == propertyType,
-              orElse: () => <String, dynamic>{}, // Renvoie un map vide si aucune correspondance n'est trouvée
-            );
-
-            if (existingPropertyType.isNotEmpty) {
-              // Incrémenter le compte si la propriété existe déjà
-              existingPropertyType['count'] += 1;
-            } else {
-              // Ajouter une nouvelle entrée si la propriété n'existe pas encore
-              propertyData.add({'propertyType': propertyType, 'count': 1});
-            }
-          }
-        } else {
-          print('Invalid token or missing address for token: $token');
-        }
-      }
-
-      setState(() {
-        _propertyData = propertyData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print("Error fetching property data: $e");
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  // Mapper les types de propriété aux titres correspondants
-  String getPropertyTypeName(int propertyType) {
-    switch (propertyType) {
-      case 1:
-        return 'Single Family';
-      case 2:
-        return 'Multi Family';
-      case 3:
-        return 'Commercial';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  // Calculer les données pour le graphique en donut
-  List<PieChartSectionData> _buildDonutChartData() {
-    return _propertyData.map((data) {
-      final double percentage = (data['count'] / _propertyData.fold(0.0, (double sum, item) => sum + item['count'])) * 100;
-      return PieChartSectionData(
-        value: data['count'].toDouble(),
-        title: '${percentage.toStringAsFixed(1)}%',  // Afficher le pourcentage
-        color: _getPropertyColor(data['propertyType']),
-        radius: 50,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      );
-    }).toList();
-  }
-
-  // Assigner des couleurs selon les types de propriété
-  Color _getPropertyColor(int propertyType) {
-    switch (propertyType) {
-      case 1:
-        return Colors.blue;
-      case 2:
-        return Colors.green;
-      case 3:
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  // Construire la légende sous le donut chart
-  Widget _buildLegend() {
-    return Column(
-      children: _propertyData.map((data) {
-        return Row(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              color: _getPropertyColor(data['propertyType']),
-            ),
-            const SizedBox(width: 8),
-            Text(getPropertyTypeName(data['propertyType'])),
-          ],
-        );
-      }).toList(),
-    );
-  }
-
-  // Regrouper les données en fonction de la période sélectionnée
-  List<Map<String, dynamic>> _groupRentDataByPeriod() {
+  List<Map<String, dynamic>> _groupRentDataByPeriod(DataManager dataManager) {
     if (_selectedPeriod == 'Semaine') {
-      return _groupByWeek(_rentData);
+      return _groupByWeek(dataManager.rentData);
     } else if (_selectedPeriod == 'Mois') {
-      return _groupByMonth(_rentData);
+      return _groupByMonth(dataManager.rentData);
     } else {
-      return _groupByYear(_rentData);
+      return _groupByYear(dataManager.rentData);
     }
   }
 
-  // Fonction pour regrouper par semaine
   List<Map<String, dynamic>> _groupByWeek(List<Map<String, dynamic>> data) {
     Map<String, double> groupedData = {};
     for (var entry in data) {
       DateTime date = DateTime.parse(entry['date']);
-      String weekKey = "${date.year}-Semaine ${_weekNumber(date)}";
+      String weekKey = "${date.year}-S ${_weekNumber(date)}";
       groupedData[weekKey] = (groupedData[weekKey] ?? 0) + entry['rent'];
     }
     return groupedData.entries
@@ -184,7 +44,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
         .toList();
   }
 
-  // Fonction pour regrouper par mois
   List<Map<String, dynamic>> _groupByMonth(List<Map<String, dynamic>> data) {
     Map<String, double> groupedData = {};
     for (var entry in data) {
@@ -197,7 +56,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
         .toList();
   }
 
-  // Fonction pour regrouper par année
   List<Map<String, dynamic>> _groupByYear(List<Map<String, dynamic>> data) {
     Map<String, double> groupedData = {};
     for (var entry in data) {
@@ -210,14 +68,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
         .toList();
   }
 
-  // Calculer le numéro de semaine d'une date
   int _weekNumber(DateTime date) {
     int dayOfYear = int.parse(DateFormat("D").format(date));
     int weekNumber = ((dayOfYear - date.weekday + 10) / 7).floor();
     return weekNumber;
   }
 
-  // Construire les points pour le graphique des loyers
   List<FlSpot> _buildChartData(List<Map<String, dynamic>> data) {
     List<FlSpot> spots = [];
     for (var i = 0; i < data.length; i++) {
@@ -227,121 +83,152 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return spots;
   }
 
-  // Construire les labels d'axe X avec les dates
   List<String> _buildDateLabels(List<Map<String, dynamic>> data) {
     return data.map((entry) => entry['date'].toString()).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, dynamic>> groupedData = _groupRentDataByPeriod();
+    final dataManager = Provider.of<DataManager>(context);
+
+    List<Map<String, dynamic>> groupedData = _groupRentDataByPeriod(dataManager);
 
     return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Graphique des loyers perçus',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 20),
-                            _buildPeriodSelector(),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              height: 300,
-                              child: LineChart(
-                                LineChartData(
-                                  gridData: const FlGridData(show: true),
-                                  titlesData: FlTitlesData(
-                                    leftTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: true),
-                                    ),
-                                    bottomTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        interval: 1,
-                                        getTitlesWidget: (value, meta) {
-                                          List<String> labels = _buildDateLabels(groupedData);
-                                          return Text(labels[value.toInt()]);
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  borderData: FlBorderData(
-                                    show: true,
-                                    border: Border.all(color: Colors.black, width: 1),
-                                  ),
-                                  minX: 0,
-                                  maxX: (groupedData.length - 1).toDouble(),
-                                  minY: 0,
-                                  lineBarsData: [
-                                    LineChartBarData(
-                                      spots: _buildChartData(groupedData),
-                                      isCurved: true,
-                                      barWidth: 3,
-                                      color: Colors.blue,
-                                      belowBarData: BarAreaData(
-                                        show: true,
-                                        color: Colors.blue.withOpacity(0.3),
-                                      ),
-                                    ),
-                                  ],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Padding(
+        padding: const EdgeInsets.only(top: kToolbarHeight, bottom: 80.0), // Ajout du padding en haut et en bas
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              Card(
+                elevation: 0,
+                color: Theme.of(context).cardColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Graphique des loyers perçus',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildPeriodSelector(),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 300,
+                        child: LineChart(
+                          LineChartData(
+                            gridData: FlGridData(show: true),
+                            titlesData: FlTitlesData(
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: false,
+                                ),
+                              ),
+                              rightTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  interval: (groupedData.isNotEmpty
+                                          ? (groupedData.length / 5).round()
+                                          : 1)
+                                      .toDouble(),
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      value.toStringAsFixed(0),
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                ),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  interval: (groupedData.isNotEmpty
+                                          ? (groupedData.length / 6).round()
+                                          : 1)
+                                      .toDouble(),
+                                  getTitlesWidget: (value, meta) {
+                                    List<String> labels = _buildDateLabels(groupedData);
+                                    if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                                      return Transform.rotate(
+                                        angle: -0.5,
+                                        child: Text(
+                                          labels[value.toInt()],
+                                          style: const TextStyle(fontSize: 8),
+                                        ),
+                                      );
+                                    } else {
+                                      return const Text('');
+                                    }
+                                  },
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Répartition des Tokens par Type de Propriété',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            borderData: FlBorderData(
+                              show: false,
                             ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              height: 300,
-                              child: PieChart(
-                                PieChartData(
-                                  sections: _buildDonutChartData(),
-                                  centerSpaceRadius: 50,
-                                  sectionsSpace: 2,
-                                  borderData: FlBorderData(show: false),
+                            minX: 0,
+                            maxX: (groupedData.length - 1).toDouble(),
+                            minY: 0,
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: _buildChartData(groupedData),
+                                isCurved: true,
+                                barWidth: 3,
+                                color: Colors.blue,
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  color: Colors.blue.withOpacity(0.3),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 20),
-                            _buildLegend(), // Ajouter la légende sous le graphique
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+              Card(
+                elevation: 0,
+                color: Theme.of(context).cardColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Répartition des Tokens par Type de Propriété',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10), // Réduire l'espace ici
+                      SizedBox(
+                        height: 300,
+                        child: PieChart(
+                          PieChartData(
+                            sections: _buildDonutChartData(dataManager),
+                            centerSpaceRadius: 50,
+                            sectionsSpace: 2,
+                            borderData: FlBorderData(show: false),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10), // Ajuster cet espace également
+                      _buildLegend(dataManager),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // Créer la barre de sélection de période
   Widget _buildPeriodSelector() {
     return Row(
       children: [
@@ -352,7 +239,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // Créer chaque bouton de sélection de période
   Widget _buildPeriodButton(String period, {bool isFirst = false, bool isLast = false}) {
     bool isSelected = _selectedPeriod == period;
 
@@ -371,7 +257,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               right: isLast ? const Radius.circular(20) : Radius.zero,
             ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           alignment: Alignment.center,
           child: Text(
             period,
@@ -383,5 +269,88 @@ class _StatisticsPageState extends State<StatisticsPage> {
         ),
       ),
     );
+  }
+
+  List<PieChartSectionData> _buildDonutChartData(DataManager dataManager) {
+    return dataManager.propertyData.map((data) {
+      final double percentage = (data['count'] / dataManager.propertyData.fold(0.0, (double sum, item) => sum + item['count'])) * 100;
+      return PieChartSectionData(
+        value: data['count'].toDouble(),
+        title: '${percentage.toStringAsFixed(1)}%',
+        color: _getPropertyColor(data['propertyType']),
+        radius: 50,
+        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+  }
+
+  Widget _buildLegend(DataManager dataManager) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 4.0,
+      children: dataManager.propertyData.map((data) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 16,
+              height: 16,
+              color: _getPropertyColor(data['propertyType']),
+            ),
+            const SizedBox(width: 4),
+            Text(getPropertyTypeName(data['propertyType'])),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Color _getPropertyColor(int propertyType) {
+    switch (propertyType) {
+      case 1:
+      return Colors.blue;      // Couleur pour le type de propriété 1
+    case 2:
+      return Colors.green;     // Couleur pour le type de propriété 2
+    case 3:
+      return Colors.orange;    // Couleur pour le type de propriété 3
+    case 4:
+      return Colors.red;       // Couleur pour le type de propriété 4
+    case 5:
+      return Colors.purple;    // Couleur pour le type de propriété 5
+    case 6:
+      return Colors.yellow;    // Couleur pour le type de propriété 6
+    case 7:
+      return Colors.teal;      // Couleur pour le type de propriété 7
+    default:
+      return Colors.grey;      // Couleur par défaut pour les types non spécifiés
+
+    }
+  }
+
+  String getPropertyTypeName(int propertyType) {
+    switch (propertyType) {
+      case 1:
+        return 'Single Family';
+      case 2:
+        return 'Multi Family';
+      case 3:
+        return 'Duplex';
+      case 4:
+        return 'Condominium';
+      case 6:
+        return 'Mixed-Use';
+      case 8:
+        return 'Multi Family';
+      case 9:
+        return 'Commercial';
+      case 10:
+        return 'SFR Portfolio';
+      case 11:
+        return 'MFR Portfolio';
+      case 12:
+        return 'Resort Bungalow';
+      default:
+        return 'Unknown';
+    }
   }
 }

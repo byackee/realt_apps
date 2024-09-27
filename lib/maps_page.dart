@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 import 'package:latlong2/latlong.dart';
 import 'api_service.dart';
@@ -13,7 +14,7 @@ class MapsPage extends StatefulWidget {
 
 class _MapsPageState extends State<MapsPage> {
   Future<List<dynamic>>? _walletTokens;
-  Future<List<dynamic>>? _rmmTokens; // Ajout des tokens RMM
+  Future<List<dynamic>>? _rmmTokens;
   Future<List<dynamic>>? _realTokens;
 
   // Create a PopupController to manage the popups
@@ -31,7 +32,7 @@ class _MapsPageState extends State<MapsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<List<dynamic>>(
-        future: Future.wait([_walletTokens!, _rmmTokens!, _realTokens!]), // Attendre les trois requêtes
+        future: Future.wait([_walletTokens!, _rmmTokens!, _realTokens!]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -41,9 +42,9 @@ class _MapsPageState extends State<MapsPage> {
             return const Center(child: Text('No tokens found in the wallet or RMM'));
           }
 
-          final walletTokens = snapshot.data![0][0]['balances']; // Accès aux balances des tokens du wallet
-          final rmmTokens = snapshot.data![1]; // Accès aux balances des tokens du RMM
-          final realTokens = snapshot.data![2]; // Infos des RealTokens
+          final walletTokens = snapshot.data![0][0]['balances'];
+          final rmmTokens = snapshot.data![1];
+          final realTokens = snapshot.data![2];
 
           final List<Marker> markers = [];
 
@@ -51,7 +52,6 @@ class _MapsPageState extends State<MapsPage> {
           for (var walletToken in walletTokens) {
             final tokenAddress = walletToken['token']['address'].toLowerCase();
 
-            // Recherche du RealToken correspondant via uuid
             final matchingRealToken = realTokens.firstWhere(
               (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
               orElse: () => null,
@@ -69,7 +69,7 @@ class _MapsPageState extends State<MapsPage> {
                     height: 80.0,
                     child: const Icon(
                       Icons.location_on,
-                      color: Colors.green, // Couleur pour les tokens du Wallet
+                      color: Colors.green,
                       size: 40.0,
                     ),
                   ),
@@ -82,7 +82,6 @@ class _MapsPageState extends State<MapsPage> {
           for (var rmmToken in rmmTokens) {
             final tokenAddress = rmmToken['token']['id'].toLowerCase();
 
-            // Recherche du RealToken correspondant via uuid
             final matchingRealToken = realTokens.firstWhere(
               (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
               orElse: () => null,
@@ -100,7 +99,7 @@ class _MapsPageState extends State<MapsPage> {
                     height: 80.0,
                     child: const Icon(
                       Icons.location_on,
-                      color: Colors.blue, // Couleur pour les tokens du RMM
+                      color: Colors.blue,
                       size: 40.0,
                     ),
                   ),
@@ -115,62 +114,70 @@ class _MapsPageState extends State<MapsPage> {
 
           return FlutterMap(
             options: MapOptions(
-              initialCenter: const LatLng(42.367476, -83.130921), // Point de départ par défaut
+              initialCenter: LatLng(42.367476, -83.130921),
               initialZoom: 13.0,
-              onTap: (_, __) => _popupController.hideAllPopups(), // Cacher tous les popups en cas de tap sur la carte
+              onTap: (_, __) => _popupController.hideAllPopups(),
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c'],
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // Utilisation directe de l'URL sans sous-domaines
               ),
-              PopupMarkerLayer(
-                options: PopupMarkerLayerOptions(
-                  markers: markers,
-                  popupController: _popupController,
-                  markerTapBehavior: MarkerTapBehavior.togglePopup(),
-                  popupDisplayOptions: PopupDisplayOptions(
-                    builder: (BuildContext context, Marker marker) {
-                      // Trouver le RealToken correspondant à la position du marqueur
-                      final matchingRealToken = realTokens.firstWhere(
-                        (realToken) =>
-                            double.parse(realToken['coordinate']['lat']) == marker.point.latitude &&
-                            double.parse(realToken['coordinate']['lng']) == marker.point.longitude,
-                        orElse: () => null,
+              PopupScope(
+                child: MarkerClusterLayerWidget(
+                  options: MarkerClusterLayerOptions(
+                    maxClusterRadius: 120,
+                    disableClusteringAtZoom: 14, // Désactiver le clustering au-dessus du zoom 16
+                    size: const Size(40, 40),
+                    markers: markers,
+                    builder: (context, markers) {
+                      return CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Text(markers.length.toString()),
                       );
-
-                      if (matchingRealToken != null) {
-                        return Card(
-                          child: Container(
-                            width: 200, // Contrainte de largeur
-                            constraints: const BoxConstraints(
-                              maxHeight: 200, // Contrainte de hauteur maximale
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Image.network(
-                                  matchingRealToken['imageLink'][0],
-                                  width: 200,
-                                  height: 100,
-                                  fit: BoxFit.cover, // Assurez-vous que l'image ne dépasse pas
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    matchingRealToken['shortName'],
-                                    style: const TextStyle(
-                                        fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      } else {
-                        return const Text('No data available for this marker');
-                      }
                     },
+                    popupOptions: PopupOptions(
+                      popupController: _popupController,
+                      popupBuilder: (BuildContext context, Marker marker) {
+                        final matchingRealToken = realTokens.firstWhere(
+                          (realToken) =>
+                              double.parse(realToken['coordinate']['lat']) ==
+                                  marker.point.latitude &&
+                              double.parse(realToken['coordinate']['lng']) ==
+                                  marker.point.longitude,
+                          orElse: () => null,
+                        );
+
+                        if (matchingRealToken != null) {
+                          return Card(
+                            child: Container(
+                              width: 200,
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Image.network(
+                                    matchingRealToken['imageLink'][0],
+                                    width: 200,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      matchingRealToken['shortName'],
+                                      style: const TextStyle(
+                                          fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else {
+                          return const Text('No data available for this marker');
+                        }
+                      },
+                    ),
                   ),
                 ),
               ),

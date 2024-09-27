@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Import pour le formatage des nombres
-import 'api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'data_manager.dart';
+import 'package:intl/intl.dart';
 
 // Fonction de formatage des valeurs monétaires avec des espaces pour les milliers
 String formatCurrency(double value) {
   final NumberFormat formatter = NumberFormat.currency(
-    locale: 'fr_FR',  // Utilisez 'fr_FR' pour les espaces entre milliers
-    symbol: '\$',     // Symbole de la devise
-    decimalDigits: 2, // Nombre de chiffres après la virgule
+    locale: 'fr_FR',
+    symbol: '\$',
+    decimalDigits: 2,
   );
   return formatter.format(value);
 }
@@ -20,292 +22,276 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  Future<List<dynamic>>? _walletTokens;
-  Future<List<dynamic>>? _rmmTokens;
-  Future<List<dynamic>>? _realTokens;
-
-  double totalValue = 0;
-  double walletValue = 0;
-  double rmmValue = 0;
-  double rwaHoldingsValue = 0; // Valeur du token RWA Holdings SA
-  int rentedUnits = 0;
-  int totalUnits = 0;
-  int totalTokens = 0;
-  double walletTokensSum = 0;
-  double rmmTokensSum = 0;
-  double averageAnnualYield = 0;
-  double dailyRent = 0;
-  double weeklyRent = 0;
-  double monthlyRent = 0;
-  double yearlyRent = 0;
-
-  final String rwaTokenAddress = '0x0675e8f4a52ea6c845cb6427af03616a2af42170'; // Adresse du token RWA Holdings SA
-
   @override
   void initState() {
     super.initState();
-    _walletTokens = ApiService.fetchTokens(); // Récupérer les tokens du portefeuille
-    _rmmTokens = ApiService.fetchRMMTokens(); // Récupérer les tokens du RMM
-    _realTokens = ApiService.fetchRealTokens(); // Récupérer les RealTokens
-
-    _calculatePortfolioValues(); // Calculer les valeurs au chargement
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    //dataManager.fetchRentData(); // Lancer fetchRentData à l'ouverture du Dashboard
   }
 
-  Future<void> _calculatePortfolioValues() async {
-    final walletData = await _walletTokens;
-    final rmmData = await _rmmTokens;
-    final realTokensData = await _realTokens;
+  // Récupère la dernière valeur de loyer
+  String _getLastRentReceived(DataManager dataManager) {
+    final rentData = dataManager.rentData;
 
-    double walletValueSum = 0;
-    double rmmValueSum = 0;
-    double rwaValue = 0;
-    double walletTokens = 0;
-    double rmmTokens = 0;
-    int rentedUnitsSum = 0;
-    int totalUnitsSum = 0;
-    double annualYieldSum = 0;
-    double dailyRentSum = 0;
-    double weeklyRentSum = 0;
-    double monthlyRentSum = 0;
-    double yearlyRentSum = 0;
-    int yieldCount = 0;
+    if (rentData.isEmpty) {
+      return 'Aucun loyer reçu'; // Valeur par défaut si aucune donnée de loyer n'est disponible
+    }
 
-    if (walletData != null && rmmData != null && realTokensData != null) {
-      final walletBalances = walletData[0]['balances'];
-      final rmmBalances = rmmData;
+    // Trier les loyers par date pour trouver la plus récente
+    rentData.sort((a, b) => DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])));
+    
+    // Récupérer le dernier loyer
+    final lastRent = rentData.first['rent'];
+    return formatCurrency(lastRent);
+  }
 
-      // Calcul des valeurs pour les tokens dans le wallet
-      for (var walletToken in walletBalances) {
-        final tokenAddress = walletToken['token']['address'].toLowerCase();
-        final matchingRealToken = realTokensData.firstWhere(
-          (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-          orElse: () => null,
-        );
+  // Groupement mensuel sur les 12 derniers mois glissants pour la carte Rendement
+  List<double> _getLast12MonthsRent(DataManager dataManager) {
+    final currentDate = DateTime.now();
+    final rentData = dataManager.rentData;
 
-        if (matchingRealToken != null) {
-          final double tokenPrice = matchingRealToken['tokenPrice'];
-          final double tokenValue = double.parse(walletToken['amount']) * tokenPrice;
+    Map<String, double> monthlyRent = {};
 
-          // Addition des unités louées et des unités totales pour le wallet
-          rentedUnitsSum += (matchingRealToken['rentedUnits'] ?? 0) as int;
-          totalUnitsSum += (matchingRealToken['totalUnits'] ?? 0) as int;
-
-          if (tokenAddress == rwaTokenAddress.toLowerCase()) {
-            rwaValue += tokenValue; // Ajouter à la somme de RWA Holdings SA
-          } else {
-            walletValueSum += tokenValue; // Ajouter au wallet (en excluant RWA Holdings SA)
-            walletTokens += double.parse(walletToken['amount']); // Additionner le nombre de tokens
-
-            // Calcul des rendements et des loyers
-            annualYieldSum += matchingRealToken['annualPercentageYield'];
-            yieldCount++; // Incrémenter le compteur de rendements
-            dailyRentSum += matchingRealToken['netRentDayPerToken'] * double.parse(walletToken['amount']);
-            monthlyRentSum += matchingRealToken['netRentMonthPerToken'] * double.parse(walletToken['amount']);
-            yearlyRentSum += matchingRealToken['netRentYearPerToken'] * double.parse(walletToken['amount']);
-          }
-        }
-      }
-
-      // Calcul des valeurs pour les tokens dans le RMM
-      for (var rmmToken in rmmBalances) {
-        final tokenAddress = rmmToken['token']['id'].toLowerCase();
-        final matchingRealToken = realTokensData.firstWhere(
-          (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-          orElse: () => null,
-        );
-
-        if (matchingRealToken != null) {
-          final BigInt rawAmount = BigInt.parse(rmmToken['amount']);
-          final int decimals = matchingRealToken['decimals'] ?? 18;
-          final double amount = rawAmount / BigInt.from(10).pow(decimals);
-          final double tokenPrice = matchingRealToken['tokenPrice'];
-          rmmValueSum += amount * tokenPrice;
-          rmmTokens += amount; // Additionner le nombre de tokens
-
-          // Addition des unités louées et des unités totales pour le RMM
-          rentedUnitsSum += (matchingRealToken['rentedUnits'] ?? 0) as int;
-          totalUnitsSum += (matchingRealToken['totalUnits'] ?? 0) as int;
-
-          // Calcul des rendements et des loyers pour le RMM
-          annualYieldSum += matchingRealToken['annualPercentageYield'];
-          yieldCount++; // Incrémenter le compteur de rendements
-          dailyRentSum += matchingRealToken['netRentDayPerToken'] * amount;
-          monthlyRentSum += matchingRealToken['netRentMonthPerToken'] * amount;
-          yearlyRentSum += matchingRealToken['netRentYearPerToken'] * amount;
-        }
+    for (var rentEntry in rentData) {
+      DateTime date = DateTime.parse(rentEntry['date']);
+      if (date.isAfter(currentDate.subtract(Duration(days: 365)))) {
+        String monthKey = DateFormat('yyyy-MM').format(date);
+        monthlyRent[monthKey] = (monthlyRent[monthKey] ?? 0) + rentEntry['rent'];
       }
     }
 
-    setState(() {
-      walletValue = walletValueSum;
-      rmmValue = rmmValueSum;
-      rwaHoldingsValue = rwaValue; // Mettre à jour la valeur de RWA Holdings SA
-      totalValue = walletValueSum + rmmValueSum + rwaValue;
-      walletTokensSum = walletTokens;
-      rmmTokensSum = rmmTokens;
-      totalTokens = (walletTokens + rmmTokens).toInt();
-      rentedUnits = rentedUnitsSum; // Somme des unités louées pour wallet et RMM
-      totalUnits = totalUnitsSum; // Somme des unités totales pour wallet et RMM
-      averageAnnualYield = yieldCount > 0 ? annualYieldSum / yieldCount : 0; // Calcul de la moyenne
-      dailyRent = dailyRentSum;
-      weeklyRent = dailyRentSum * 7;
-      monthlyRent = monthlyRentSum;
-      yearlyRent = yearlyRentSum;
-    });
+    // Assurer que nous avons les 12 derniers mois dans l'ordre
+    List<String> sortedMonths = List.generate(12, (index) {
+      DateTime date = DateTime(currentDate.year, currentDate.month - index, 1);
+      return DateFormat('yyyy-MM').format(date);
+    }).reversed.toList();
+
+    return sortedMonths.map((month) => monthlyRent[month] ?? 0).toList();
+  }
+
+  // Méthode pour créer un mini graphique pour la carte Rendement
+  Widget _buildMiniGraphForRendement(List<double> data, BuildContext context) {
+    return Align(
+      alignment: Alignment.center,
+      child: SizedBox(
+        height: 60,
+        width: 120,
+        child: LineChart(
+          LineChartData(
+            gridData: FlGridData(show: false),
+            titlesData: FlTitlesData(show: false),
+            borderData: FlBorderData(show: false),
+            minX: 0,
+            maxX: data.length.toDouble() - 1,
+            minY: data.reduce((a, b) => a < b ? a : b),
+            maxY: data.reduce((a, b) => a > b ? a : b),
+            lineBarsData: [
+              LineChartBarData(
+                spots: List.generate(data.length, (index) => FlSpot(index.toDouble(), data[index])),
+                isCurved: true,
+                barWidth: 2,
+                color: Colors.blue,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                    radius: 2,
+                    color: Colors.blue,
+                    strokeWidth: 0,
+                  ),
+                ),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: Colors.blue.withOpacity(0.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Construction des cartes du Dashboard
+  Widget _buildCard(String title, IconData icon, Widget firstChild, List<Widget> otherChildren, DataManager dataManager, BuildContext context, {bool hasGraph = false}) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 0,
+      color: Theme.of(context).cardColor, // Utilisation de la couleur du thème
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                   Icon(
+                    icon,
+                    size: 24,
+                    color: title == 'Loyers' ? Colors.green :
+                          title == 'Tokens' ? Colors.orange :
+                          title == 'Propriétés' ? Colors.blue :
+                          title == 'Portfolio' ? Colors.black : Colors.blue, // Couleurs spécifiques
+                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 19, // Légèrement augmenté
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                firstChild, // Première ligne stylisée
+                const SizedBox(height: 3),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: otherChildren, // Autres lignes inchangées
+                ),
+              ],
+            ),
+            const Spacer(),
+            if (hasGraph)
+              _buildMiniGraphForRendement(_getLast12MonthsRent(dataManager), context), // Graphique pour la carte Rendement uniquement
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Construction d'une ligne pour afficher la valeur avant le texte
+  Widget _buildValueBeforeText(String value, String text) {
+    return Row(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16, // Augmenter la taille de la police pour la valeur
+            fontWeight: FontWeight.bold, // Mettre la valeur en gras
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 13),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
+    final dataManager = Provider.of<DataManager>(context);
+    
+    // Récupérer la couleur de texte à partir du thème actuel
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
 
-    // Calcul du pourcentage de logements loués
-    final double rentedPercentage =
-        totalUnits > 0 ? (rentedUnits / totalUnits) * 100 : 0;
+    // Récupérer la dernière valeur du loyer
+    final lastRentReceived = _getLastRentReceived(dataManager);
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Applique le background du thème
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.only(top: 110.0, left: 12.0, right: 12.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, // Aligner tout à gauche
             children: [
-              // Carte "Overview"
-              SizedBox(
-                width: screenWidth,
-                child: Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18.0), // Taille intermédiaire
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Overview',
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold), // Taille intermédiaire
-                        ),
-                        const SizedBox(height: 15),
-                        Text(
-                          'Total Portfolio Value: ${formatCurrency(totalValue)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), // Taille intermédiaire
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Wallet Value: ${formatCurrency(walletValue)}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'RMM Value: ${formatCurrency(rmmValue)}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'RWA Holdings SA Value: ${formatCurrency(rwaHoldingsValue)}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
+              Text(
+                'Bonjour',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.left, // Alignement à gauche
+              ),
+              const SizedBox(height: 8),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Vos derniers loyers reçus s\'élevent a ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: textColor, // Applique la couleur du thème
+                      ),
                     ),
-                  ),
+                    TextSpan(
+                      text: lastRentReceived,
+                      style: TextStyle(
+                        fontSize: 18, // Augmenter la taille de la police
+                        fontWeight: FontWeight.bold, // Texte en gras
+                        color: textColor, // Applique la couleur du thème
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 25), // Espacement intermédiaire
-              // Carte "Propriétés"
-              SizedBox(
-                width: screenWidth,
-                child: Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18.0), // Taille intermédiaire
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Propriétés',
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold), // Taille intermédiaire
-                        ),
-                        const SizedBox(height: 15),
-                        Text(
-                            'Percentage Rented: ${rentedPercentage.toStringAsFixed(2)}%',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                            'Rented Units: $rentedUnits / Total Units: $totalUnits',
-                            style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 20),
+              _buildCard(
+                'Portfolio',
+                Icons.dashboard,
+                _buildValueBeforeText(formatCurrency(dataManager.totalValue), 'Total Portfolio'), // Première ligne
+                [
+                  Text('Wallet: ${formatCurrency(dataManager.walletValue)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('RMM: ${formatCurrency(dataManager.rmmValue)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('RWA Holdings SA: ${formatCurrency(dataManager.rwaHoldingsValue)}',
+                      style: const TextStyle(fontSize: 13)),
+                ],
+                dataManager,
+                context,
               ),
-              const SizedBox(height: 25),
-              // Carte "Tokens"
-              SizedBox(
-                width: screenWidth,
-                child: Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18.0), // Taille intermédiaire
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tokens',
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold), // Taille intermédiaire
-                        ),
-                        const SizedBox(height: 15),
-                        Text('Total Tokens: $totalTokens', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Tokens in Wallet: ${formatCurrency(walletTokensSum)}',
-                            style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Tokens in RMM: ${formatCurrency(rmmTokensSum)}',
-                            style: const TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 15),
+              _buildCard(
+                'Propriétés',
+                Icons.home,
+                _buildValueBeforeText(
+                    '${(dataManager.rentedUnits / dataManager.totalUnits * 100).toStringAsFixed(2)}%', 'Rented'),
+                [
+                  Text('Rented Units: ${dataManager.rentedUnits} / ${dataManager.totalUnits}',
+                      style: const TextStyle(fontSize: 13)),
+                ],
+                dataManager,
+                context,
               ),
-              const SizedBox(height: 25),
-              // Carte "Rendement"
-              SizedBox(
-                width: screenWidth,
-                child: Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18.0), // Taille intermédiaire
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Rendement',
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold), // Taille intermédiaire
-                        ),
-                        const SizedBox(height: 15),
-                        Text(
-                          'Rendement Annuel (Moyenne): ${averageAnnualYield.toStringAsFixed(2)}%',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Journaliers: ${formatCurrency(dailyRent)}',
-                            style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Hebdomadaires: ${formatCurrency(weeklyRent)}',
-                            style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Mensuels: ${formatCurrency(monthlyRent)}',
-                            style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Annuels: ${formatCurrency(yearlyRent)}',
-                            style: const TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 15),
+              _buildCard(
+                'Tokens',
+                Icons.account_balance_wallet,
+                _buildValueBeforeText('${dataManager.totalTokens}', 'Total Tokens'),
+                [
+                  Text('Wallet: ${formatCurrency(dataManager.walletTokensSum)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('RMM: ${formatCurrency(dataManager.rmmTokensSum)}',
+                      style: const TextStyle(fontSize: 13)),
+                ],
+                dataManager,
+                context,
+              ),
+              const SizedBox(height: 15),
+              _buildCard(
+                'Loyers',
+                Icons.attach_money,
+                _buildValueBeforeText(
+                    '${dataManager.averageAnnualYield.toStringAsFixed(2)}%', 'Rendement Annuel'),
+                [
+                  Text('Journaliers: ${formatCurrency(dataManager.dailyRent)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('Hebdomadaires: ${formatCurrency(dataManager.weeklyRent)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('Mensuels: ${formatCurrency(dataManager.monthlyRent)}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('Annuels: ${formatCurrency(dataManager.yearlyRent)}',
+                      style: const TextStyle(fontSize: 13)),
+                ],
+                dataManager,
+                context,
+                hasGraph: true, // Seule la carte "Rendement" aura un graphique
               ),
             ],
           ),

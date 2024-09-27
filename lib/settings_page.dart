@@ -5,7 +5,7 @@ import 'manage_eth_addresses_page.dart'; // Import de la page
 class SettingsPage extends StatefulWidget {
   final Function(bool) onThemeChanged;
 
-  const SettingsPage({required this.onThemeChanged, super.key});
+  const SettingsPage({required this.onThemeChanged, Key? key}) : super(key: key);
 
   @override
   _SettingsPageState createState() => _SettingsPageState();
@@ -43,6 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Applique le background du thème
       appBar: AppBar(title: const Text('Settings')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

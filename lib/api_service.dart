@@ -32,7 +32,7 @@ class ApiService {
       ethAddresses = ['']; // Si aucune adresse n'est stockée, utiliser une adresse par défaut
     }
 
-    const query = '''
+    final query = '''
       query RealtokenQuery(\$addressList: [String]!) {
         accounts(where: { address_in: \$addressList }) {
           address
@@ -88,7 +88,7 @@ class ApiService {
     }
 
     // Construire la requête GraphQL avec la variable
-    const query = '''
+    final query = '''
       query RmmQuery(\$addressList: String!) {
         users(where: { id: \$addressList }) {
           balances(
@@ -171,49 +171,66 @@ class ApiService {
     }
   }
 
-  // Récupérer les données de loyer pour chaque wallet et les fusionner
+  // Récupérer les données de loyer pour chaque wallet et les fusionner avec cache
   static Future<List<Map<String, dynamic>>> fetchRentData(List<String> wallets) async {
-  List<Map<String, dynamic>> mergedRentData = [];
+    var box = Hive.box('rentData');
+    final lastFetchTime = box.get('lastRentFetchTime');
+    final DateTime now = DateTime.now();
 
-  for (String wallet in wallets) {
-    final url = '$rentTrackerUrl$wallet';
-    print('Fetching rent data for wallet: $wallet');  // Log wallet being fetched
-
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      List<Map<String, dynamic>> rentData = List<Map<String, dynamic>>.from(json.decode(response.body));
-      print('Rent data fetched for $wallet: $rentData');  // Log the fetched rent data
-
-      for (var rentEntry in rentData) {
-        final existingEntry = mergedRentData.firstWhere(
-  (entry) => entry['date'] == rentEntry['date'],
-  orElse: () => <String, dynamic>{}, // Retourner un objet vide si aucune correspondance n'est trouvée
-);
-
-if (existingEntry.isNotEmpty) {
-  // Fusionner les valeurs si une entrée existe déjà
-  existingEntry['rent'] = (existingEntry['rent'] ?? 0) + (rentEntry['rent'] ?? 0);
-} else {
-  // Ajouter une nouvelle entrée si elle n'existe pas
-  mergedRentData.add({
-    'date': rentEntry['date'],
-    'rent': rentEntry['rent'] ?? 0,
-  });
-}
-
-
-        print('Merging rent for date ${rentEntry['date']}: ${existingEntry['rent']} + ${rentEntry['rent']}');
-        existingEntry['rent'] = (existingEntry['rent'] ?? 0) + (rentEntry['rent'] ?? 0);
-            }
-    } else {
-      print('Failed to load rent data for wallet: $wallet');
-      throw Exception('Failed to load rent data for wallet: $wallet');
+    // Vérifier si les données en cache sont toujours valides
+    if (lastFetchTime != null) {
+      final DateTime lastFetch = DateTime.parse(lastFetchTime);
+      if (now.difference(lastFetch) < cacheDuration) {
+        final cachedData = box.get('cachedRentData');
+        if (cachedData != null) {
+          return List<Map<String, dynamic>>.from(json.decode(cachedData));
+        }
+      }
     }
-  }
 
-  mergedRentData.sort((a, b) => a['date'].compareTo(b['date']));
-  return mergedRentData;
-}
+    // Si les données ne sont pas en cache ou sont expirées, on les récupère depuis l'API
+    List<Map<String, dynamic>> mergedRentData = [];
+
+    for (String wallet in wallets) {
+      final url = '$rentTrackerUrl$wallet';
+      print('Fetching rent data for wallet: $wallet');  // Log wallet being fetched
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        List<Map<String, dynamic>> rentData = List<Map<String, dynamic>>.from(json.decode(response.body));
+        print('Rent data fetched for $wallet: $rentData');  // Log the fetched rent data
+
+        for (var rentEntry in rentData) {
+          final existingEntry = mergedRentData.firstWhere(
+            (entry) => entry['date'] == rentEntry['date'],
+            orElse: () => <String, dynamic>{},
+          );
+
+          if (existingEntry.isNotEmpty) {
+            // Fusionner les valeurs si une entrée existe déjà
+            existingEntry['rent'] = (existingEntry['rent'] ?? 0) + (rentEntry['rent'] ?? 0);
+          } else {
+            // Ajouter une nouvelle entrée si elle n'existe pas
+            mergedRentData.add({
+              'date': rentEntry['date'],
+              'rent': rentEntry['rent'] ?? 0,
+            });
+          }
+        }
+      } else {
+        print('Failed to load rent data for wallet: $wallet');
+        throw Exception('Failed to load rent data for wallet: $wallet');
+      }
+    }
+
+    mergedRentData.sort((a, b) => a['date'].compareTo(b['date']));
+
+    // Stocker les nouvelles données dans Hive et mettre à jour le temps de fetch
+    box.put('cachedRentData', json.encode(mergedRentData));
+    box.put('lastRentFetchTime', now.toIso8601String());
+
+    return mergedRentData;
+  }
 
 }

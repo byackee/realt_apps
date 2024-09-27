@@ -1,6 +1,8 @@
+// portfolio_page.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import de SharedPreferences
-import 'api_service.dart';
+import 'data_manager.dart'; // Import du DataManager
 import 'portfolio_display_1.dart';
 import 'portfolio_display_2.dart';
 
@@ -12,9 +14,6 @@ class PortfolioPage extends StatefulWidget {
 }
 
 class _PortfolioPageState extends State<PortfolioPage> {
-  Future<List<dynamic>>? _walletTokens;
-  Future<List<dynamic>>? _rmmTokens;
-  Future<List<dynamic>>? _realTokens;
   bool _isDisplay1 = true; // Indicateur pour basculer entre les affichages
   String _searchQuery = ''; // Pour filtrer par nom de token
   String _sortOption = 'Name'; // Option de tri (Nom, Valeur, APY)
@@ -23,9 +22,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
   @override
   void initState() {
     super.initState();
-    _walletTokens = ApiService.fetchTokens();
-    _rmmTokens = ApiService.fetchRMMTokens();
-    _realTokens = ApiService.fetchRealTokens();
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    dataManager.fetchAndCalculateData(); // Charger les données du portefeuille
     _loadDisplayPreference(); // Charger la préférence d'affichage
   }
 
@@ -51,7 +49,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
     _saveDisplayPreference(_isDisplay1); // Sauvegarder la préférence lors du basculement
   }
 
-  // Filtrage des tokens par nom
+  // Filtrage et tri des tokens
   List<Map<String, dynamic>> _filterAndSortPortfolio(List<Map<String, dynamic>> portfolio) {
     List<Map<String, dynamic>> filteredPortfolio = portfolio
         .where((token) => token['shortName'].toLowerCase().contains(_searchQuery.toLowerCase()))
@@ -74,137 +72,29 @@ class _PortfolioPageState extends State<PortfolioPage> {
     return filteredPortfolio;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder<List<dynamic>>(
-        future: Future.wait([_walletTokens!, _rmmTokens!, _realTokens!]),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(child: Text('Error loading portfolio'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No tokens found in portfolio'));
-          }
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Consumer<DataManager>(
+      builder: (context, dataManager, child) {
+        if (dataManager.portfolio.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final walletTokens = snapshot.data![0][0]['balances'];
-          final rmmTokens = snapshot.data![1];
-          final realTokens = snapshot.data![2];
+        // Appliquer le filtre et le tri
+        final sortedFilteredPortfolio = _filterAndSortPortfolio(dataManager.portfolio);
 
-          final List<Map<String, dynamic>> portfolio = [];
-
-          for (var walletToken in walletTokens) {
-            final tokenAddress = walletToken['token']['address'].toLowerCase();
-            final matchingRealToken = realTokens.firstWhere(
-              (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-              orElse: () => null,
-            );
-
-            if (matchingRealToken != null) {
-              final double tokenPrice = matchingRealToken['tokenPrice'];
-              final totalValue = double.parse(walletToken['amount']) * tokenPrice;
-              final dailyIncome = double.parse(walletToken['amount']) * matchingRealToken['netRentDayPerToken'];
-              final monthlyIncome = double.parse(walletToken['amount']) * matchingRealToken['netRentMonthPerToken'];
-              final yearlyIncome = double.parse(walletToken['amount']) * matchingRealToken['netRentYearPerToken'];
-
-              portfolio.add({
-                'shortName': matchingRealToken['shortName'],
-                'imageLink': matchingRealToken['imageLink'][0],
-                'amount': walletToken['amount'],
-                'totalTokens': matchingRealToken['totalTokens'],
-                'source': 'Wallet',
-                'tokenPrice': tokenPrice,
-                'totalValue': totalValue,
-                'annualPercentageYield': matchingRealToken['annualPercentageYield'],
-                'dailyIncome': dailyIncome,
-                'monthlyIncome': monthlyIncome,
-                'yearlyIncome': yearlyIncome,
-                'initialLaunchDate': matchingRealToken['initialLaunchDate']?['date'],  // Date de lancement
-                'totalInvestment': matchingRealToken['totalInvestment'],  // Valeur de l'investissement
-                'underlyingAssetPrice': matchingRealToken['underlyingAssetPrice'],  // Valeur du bien
-                'initialMaintenanceReserve': matchingRealToken['initialMaintenanceReserve'],  // Réserve de maintenance
-                'rentalType': matchingRealToken['rentalType'],  // Type de location
-                'rentStartDate': matchingRealToken['rentStartDate']?['date'],  // Premier loyer
-                'rentedUnits': matchingRealToken['rentedUnits'],  // Logements loués
-                'totalUnits': matchingRealToken['totalUnits'],  // Nombre total de logements
-                'grossRentMonth': matchingRealToken['grossRentMonth'],  // Loyer brut mensuel
-                'netRentMonth': matchingRealToken['netRentMonth'],  // Loyer net mensuel
-                'constructionYear': matchingRealToken['constructionYear'],  // Année de construction
-                'propertyStories': matchingRealToken['propertyStories'],  // Nombre d'étages
-                'lotSize': matchingRealToken['lotSize'],  // Taille du terrain
-                'squareFeet': matchingRealToken['squareFeet'],  // Taille intérieure
-                'marketplaceLink': matchingRealToken['marketplaceLink'],  // Taille intérieure
-                'propertyType': matchingRealToken['propertyType'], 
-              });
-            }
-          }
-
-          for (var rmmToken in rmmTokens) {
-            final tokenAddress = rmmToken['token']['id'].toLowerCase();
-            final matchingRealToken = realTokens.firstWhere(
-              (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-              orElse: () => null,
-            );
-
-            if (matchingRealToken != null) {
-              final BigInt rawAmount = BigInt.parse(rmmToken['amount']);
-              final int decimals = matchingRealToken['decimals'] ?? 18;
-              final double amount = rawAmount / BigInt.from(10).pow(decimals);
-              final double tokenPrice = matchingRealToken['tokenPrice'];
-              final totalValue = amount * tokenPrice;
-              final dailyIncome = amount * matchingRealToken['netRentDayPerToken'];
-              final monthlyIncome = amount * matchingRealToken['netRentMonthPerToken'];
-              final yearlyIncome = amount * matchingRealToken['netRentYearPerToken'];
-
-              portfolio.add({
-                'shortName': matchingRealToken['shortName'],
-                'imageLink': matchingRealToken['imageLink'][0],
-                'amount': amount.toString(),
-                'totalTokens': matchingRealToken['totalTokens'],
-                'source': 'RMM',
-                'tokenPrice': tokenPrice,
-                'totalValue': totalValue,
-                'annualPercentageYield': matchingRealToken['annualPercentageYield'],
-                'dailyIncome': dailyIncome,
-                'monthlyIncome': monthlyIncome,
-                'yearlyIncome': yearlyIncome,
-                'initialLaunchDate': matchingRealToken['initialLaunchDate']?['date'],  // Date de lancement
-                'totalInvestment': matchingRealToken['totalInvestment'],  // Valeur de l'investissement
-                'underlyingAssetPrice': matchingRealToken['underlyingAssetPrice'],  // Valeur du bien
-                'initialMaintenanceReserve': matchingRealToken['initialMaintenanceReserve'],  // Réserve de maintenance
-                'rentalType': matchingRealToken['rentalType'],  // Type de location
-                'rentStartDate': matchingRealToken['rentStartDate']?['date'],  // Premier loyer
-                'rentedUnits': matchingRealToken['rentedUnits'],  // Logements loués
-                'totalUnits': matchingRealToken['totalUnits'],  // Nombre total de logements
-                'grossRentMonth': matchingRealToken['grossRentMonth'],  // Loyer brut mensuel
-                'netRentMonth': matchingRealToken['netRentMonth'],  // Loyer net mensuel
-                'constructionYear': matchingRealToken['constructionYear'],  // Année de construction
-                'propertyStories': matchingRealToken['propertyStories'],  // Nombre d'étages
-                'lotSize': matchingRealToken['lotSize'],  // Taille du terrain
-                'squareFeet': matchingRealToken['squareFeet'],  // Taille intérieure
-                'marketplaceLink': matchingRealToken['marketplaceLink'],  // Taille intérieure
-                'propertyType': matchingRealToken['propertyType'], 
-                });
-            }
-          }
-
-          if (portfolio.isEmpty) {
-            return const Center(child: Text('No matching tokens found'));
-          }
-
-          // Appliquer filtre et tri
-          final sortedFilteredPortfolio = _filterAndSortPortfolio(portfolio);
-
-          return NestedScrollView(
+        return Padding( // Ajouter un padding ici
+          padding: const EdgeInsets.only(top: kToolbarHeight +40), // Ajuste la valeur du padding selon ton besoin
+          child: NestedScrollView(
             headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
               return <Widget>[
                 SliverAppBar(
+                  primary: false,
                   floating: true,
                   snap: true,
                   title: Row(
                     children: [
-                      // Champ de recherche directement dans la AppBar
                       Expanded(
                         flex: 3,
                         child: TextField(
@@ -216,25 +106,19 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           decoration: InputDecoration(
                             hintText: 'Search...',
                             prefixIcon: const Icon(Icons.search),
-                            isDense: false, // Réduire la hauteur du champ de texte
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(30.0),
                               borderSide: BorderSide.none,
                             ),
-                            filled: false,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Compacter la taille
                           ),
                         ),
                       ),
                       const SizedBox(width: 8.0),
-                      // Icône pour basculer entre les vues
                       IconButton(
                         icon: Icon(_isDisplay1 ? Icons.view_module : Icons.view_list),
                         onPressed: _toggleDisplay,
                       ),
                       const SizedBox(width: 8.0),
-                      // Menu pour trier
                       PopupMenuButton<String>(
                         onSelected: (String value) {
                           setState(() {
@@ -281,9 +165,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
             body: _isDisplay1
                 ? PortfolioDisplay1(portfolio: sortedFilteredPortfolio)
                 : PortfolioDisplay2(portfolio: sortedFilteredPortfolio),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
+
 }
