@@ -17,7 +17,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
   String _searchQuery = ''; 
   String _sortOption = 'Name'; 
   bool _isAscending = true;
-  String? _selectedCity; // Ville sélectionnée pour le filtrage
+  String? _selectedCity; 
+  String _rentalStatusFilter = 'All'; // Nouveau filtre pour le statut de location
 
   @override
   void initState() {
@@ -46,11 +47,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
     _saveDisplayPreference(_isDisplay1); 
   }
 
+  // Modifier la méthode pour appliquer le filtre sur le statut de location
   List<Map<String, dynamic>> _filterAndSortPortfolio(List<Map<String, dynamic>> portfolio) {
     List<Map<String, dynamic>> filteredPortfolio = portfolio
         .where((token) =>
             token['fullName'].toLowerCase().contains(_searchQuery.toLowerCase()) &&
-            (_selectedCity == null || token['fullName'].contains(_selectedCity!)))
+            (_selectedCity == null || token['fullName'].contains(_selectedCity!)) &&
+            (_rentalStatusFilter == 'All' || _filterByRentalStatus(token)))
         .toList();
 
     if (_sortOption == 'Name') {
@@ -69,6 +72,21 @@ class _PortfolioPageState extends State<PortfolioPage> {
     return filteredPortfolio;
   }
 
+  // Nouvelle méthode pour filtrer par statut de location
+  bool _filterByRentalStatus(Map<String, dynamic> token) {
+    int rentedUnits = token['rentedUnits'] ?? 0;
+    int totalUnits = token['totalUnits'] ?? 1;
+
+    if (_rentalStatusFilter == 'Loué') {
+      return rentedUnits == totalUnits;
+    } else if (_rentalStatusFilter == 'Partiellement Loué') {
+      return rentedUnits > 0 && rentedUnits < totalUnits;
+    } else if (_rentalStatusFilter == 'Pas Loué') {
+      return rentedUnits == 0;
+    }
+    return true;
+  }
+
   // Méthode pour obtenir la liste unique des villes à partir des noms complets (fullName)
   List<String> _getUniqueCities(List<Map<String, dynamic>> portfolio) {
     final cities = portfolio.map((token) {
@@ -84,8 +102,6 @@ class _PortfolioPageState extends State<PortfolioPage> {
     return Scaffold(
       body: Consumer<DataManager>(
         builder: (context, dataManager, child) {
-         
-
           final sortedFilteredPortfolio = _filterAndSortPortfolio(dataManager.portfolio);
           final uniqueCities = _getUniqueCities(dataManager.portfolio); 
 
@@ -145,7 +161,38 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           },
                         ),
                         const SizedBox(width: 8.0),
-
+                        
+                        // Nouveau PopupMenuButton pour le filtre sur le statut de location
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.filter_alt),
+                          onSelected: (String value) {
+                            setState(() {
+                              _rentalStatusFilter = value;
+                            });
+                          },
+                          itemBuilder: (BuildContext context) {
+                            return [
+                              const PopupMenuItem(
+                                value: 'All',
+                                child: Text('All'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'Loué',
+                                child: Text('Loué'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'Partiellement Loué',
+                                child: Text('Partiellement Loué'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'Pas Loué',
+                                child: Text('Pas Loué'),
+                              ),
+                            ];
+                          },
+                        ),
+                        
+                        const SizedBox(width: 8.0),
                         PopupMenuButton<String>(
                           onSelected: (String value) {
                             setState(() {

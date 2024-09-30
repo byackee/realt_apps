@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../api/data_manager.dart';
 import 'package:intl/intl.dart';
+import '../generated/l10n.dart'; // Import pour les traductions
 
 // Fonction de formatage des valeurs monétaires avec des espaces pour les milliers
 String formatCurrency(double value) {
@@ -36,7 +37,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final rentData = dataManager.rentData;
 
     if (rentData.isEmpty) {
-      return 'Aucun loyer reçu'; // Valeur par défaut si aucune donnée de loyer n'est disponible
+      return S.of(context).noRentReceived; // Utilisation de la traduction
     }
 
     // Trier les loyers par date pour trouver la plus récente
@@ -56,7 +57,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     for (var rentEntry in rentData) {
       DateTime date = DateTime.parse(rentEntry['date']);
-      if (date.isAfter(currentDate.subtract(Duration(days: 365)))) {
+      if (date.isAfter(currentDate.subtract(const Duration(days: 365)))) {
         String monthKey = DateFormat('yyyy-MM').format(date);
         monthlyRent[monthKey] = (monthlyRent[monthKey] ?? 0) + rentEntry['rent'];
       }
@@ -131,14 +132,14 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 Row(
                   children: [
-                   Icon(
-                    icon,
-                    size: 24,
-                    color: title == 'Loyers' ? Colors.green :
-                          title == 'Tokens' ? Colors.orange :
-                          title == 'Propriétés' ? Colors.blue :
-                          title == 'Portfolio' ? Colors.black : Colors.blue, // Couleurs spécifiques
-                  ),
+                    Icon(
+                      icon,
+                      size: 24,
+                      color: title == S.of(context).rents ? Colors.green :
+                             title == S.of(context).tokens ? Colors.orange :
+                             title == S.of(context).properties ? Colors.blue :
+                             title == S.of(context).portfolio ? Colors.black : Colors.blue, // Couleurs spécifiques
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       title,
@@ -206,7 +207,7 @@ class _DashboardPageState extends State<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start, // Aligner tout à gauche
             children: [
               Text(
-                'Bonjour',
+                S.of(context).hello, // Utilisation de la traduction
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.left, // Alignement à gauche
               ),
@@ -215,7 +216,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Vos derniers loyers reçus s\'élevent a ',
+                      text: S.of(context).lastRentReceived, // Utilisation de la traduction
                       style: TextStyle(
                         fontSize: 16,
                         color: textColor, // Applique la couleur du thème
@@ -234,15 +235,15 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 20),
               _buildCard(
-                'Portfolio',
+                S.of(context).portfolio, // Utilisation de la traduction
                 Icons.dashboard,
-                _buildValueBeforeText(formatCurrency(dataManager.totalValue), 'Total Portfolio'), // Première ligne
+                _buildValueBeforeText(formatCurrency(dataManager.totalValue), S.of(context).totalPortfolio), // Première ligne
                 [
-                  Text('Wallet: ${formatCurrency(dataManager.walletValue)}',
+                  Text('${S.of(context).wallet}: ${formatCurrency(dataManager.walletValue)}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('RMM: ${formatCurrency(dataManager.rmmValue)}',
+                  Text('${S.of(context).rmm}: ${formatCurrency(dataManager.rmmValue)}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('RWA Holdings SA: ${formatCurrency(dataManager.rwaHoldingsValue)}',
+                  Text('${S.of(context).rwaHoldings}: ${formatCurrency(dataManager.rwaHoldingsValue)}',
                       style: const TextStyle(fontSize: 13)),
                 ],
                 dataManager,
@@ -250,18 +251,18 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 15),
               _buildCard(
-                'Propriétés',
+                S.of(context).properties, // Utilisation de la traduction
                 Icons.home,
                 _buildValueBeforeText(
-                    '${(dataManager.rentedUnits / dataManager.totalUnits * 100).toStringAsFixed(2)}%', 'Rented'),
+                    '${(dataManager.rentedUnits / dataManager.totalUnits * 100).toStringAsFixed(2)}%', S.of(context).rented),
                 [
-                  Text('Proporties: ${(dataManager.walletTokenCount +dataManager.rmmTokenCount)}',
+                  Text('${S.of(context).properties}: ${(dataManager.walletTokenCount +dataManager.rmmTokenCount)}',
                       style: const TextStyle(fontSize: 13)),
-                   Text('  Wallet: ${dataManager.walletTokenCount}',
+                   Text('${S.of(context).wallet}: ${dataManager.walletTokenCount}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('  RMM: ${dataManager.rmmTokenCount.toInt()}',
+                  Text('${S.of(context).rmm}: ${dataManager.rmmTokenCount.toInt()}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('Rented Units: ${dataManager.rentedUnits} / ${dataManager.totalUnits}',
+                  Text('${S.of(context).rentedUnits}: ${dataManager.rentedUnits} / ${dataManager.totalUnits}',
                       style: const TextStyle(fontSize: 13)),
                 ],
                 dataManager,
@@ -269,13 +270,13 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 15),
               _buildCard(
-                'Tokens',
+                S.of(context).tokens, // Utilisation de la traduction
                 Icons.account_balance_wallet,
-                _buildValueBeforeText('${dataManager.totalTokens}', 'Total Tokens'),
+                _buildValueBeforeText('${dataManager.totalTokens}', S.of(context).totalTokens),
                 [
-                  Text('  Wallet: ${dataManager.walletTokensSum}',
+                  Text('${S.of(context).wallet}: ${dataManager.walletTokensSums.toInt()}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('  RMM: ${dataManager.rmmTokensSum}',
+                  Text('${S.of(context).rmm}: ${dataManager.rmmTokensSums.toInt()}',
                       style: const TextStyle(fontSize: 13)),
                 ],
                 dataManager,
@@ -283,18 +284,18 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 15),
               _buildCard(
-                'Loyers',
+                S.of(context).rents, // Utilisation de la traduction
                 Icons.attach_money,
                 _buildValueBeforeText(
-                    '${dataManager.averageAnnualYield.toStringAsFixed(2)}%', 'Rendement Annuel'),
+                    '${dataManager.averageAnnualYield.toStringAsFixed(2)}%', S.of(context).annualYield),
                 [
-                  Text('Journaliers: ${formatCurrency(dataManager.dailyRent)}',
+                  Text('${S.of(context).daily}: ${formatCurrency(dataManager.dailyRent)}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('Hebdomadaires: ${formatCurrency(dataManager.weeklyRent)}',
+                  Text('${S.of(context).weekly}: ${formatCurrency(dataManager.weeklyRent)}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('Mensuels: ${formatCurrency(dataManager.monthlyRent)}',
+                  Text('${S.of(context).monthly}: ${formatCurrency(dataManager.monthlyRent)}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('Annuels: ${formatCurrency(dataManager.yearlyRent)}',
+                  Text('${S.of(context).annually}: ${formatCurrency(dataManager.yearlyRent)}',
                       style: const TextStyle(fontSize: 13)),
                 ],
                 dataManager,

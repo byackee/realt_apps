@@ -10,7 +10,10 @@ import 'dart:ui';  // Import pour le flou
 class MyHomePage extends StatefulWidget {
   final Function(bool) onThemeChanged;
 
-  const MyHomePage({required this.onThemeChanged, Key? key}) : super(key: key);
+  const MyHomePage({
+    required this.onThemeChanged,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -62,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
-          // Ajout de la BottomNavigationBar avec effet de flou
+          // Ajout de la BottomNavigationBar avec effet de flou descendant jusqu'en bas
           Positioned(
             bottom: 0,
             left: 0,
@@ -71,13 +74,16 @@ class _MyHomePageState extends State<MyHomePage> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  height: 60, // Ajuste cette hauteur selon tes besoins
+                  height: 80, // Augmenter légèrement la hauteur pour étendre le blur
                   color: Theme.of(context).brightness == Brightness.dark 
                         ? Colors.black.withOpacity(0.3) 
                         : Colors.white.withOpacity(0.3),
-                  child: CustomBottomNavigationBar(
-                    selectedIndex: _selectedIndex,
-                    onItemTapped: _onItemTapped,
+                  child: SafeArea(
+                    top: false, // Désactiver le SafeArea pour le haut, ne le garder que pour le bas
+                    child: CustomBottomNavigationBar(
+                      selectedIndex: _selectedIndex,
+                      onItemTapped: _onItemTapped,
+                    ),
                   ),
                 ),
               ),
@@ -85,7 +91,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      drawer: CustomDrawer(onThemeChanged: widget.onThemeChanged),
+      drawer: CustomDrawer(
+        onThemeChanged: widget.onThemeChanged,  // Passer la fonction onThemeChanged uniquement
+      ),
     );
   }
 }

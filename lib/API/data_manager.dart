@@ -11,8 +11,8 @@ class DataManager extends ChangeNotifier {
   int rentedUnits = 0;
   int totalUnits = 0;
   int totalTokens = 0;
-  double walletTokensSum = 0;
-  double rmmTokensSum = 0;
+  double walletTokensSums = 0;
+  double rmmTokensSums = 0;
   double averageAnnualYield = 0;
   double dailyRent = 0;
   double weeklyRent = 0;
@@ -167,6 +167,7 @@ class DataManager extends ChangeNotifier {
             'imageLink': matchingRealToken['imageLink'][0],
             'amount': amount.toString(),
             'totalTokens': matchingRealToken['totalTokens'],
+            'walletTokensSum': matchingRealToken['walletTokensSum'],
             'source': 'RMM',
             'tokenPrice': tokenPrice,
             'totalValue': amount * tokenPrice,
@@ -204,8 +205,8 @@ class DataManager extends ChangeNotifier {
     walletValue = walletValueSum;
     rmmValue = rmmValueSum;
     rwaHoldingsValue = rwaValue;
-    walletTokensSum = walletTokensSum;
-    rmmTokensSum = rmmTokensSum;
+    walletTokensSums = walletTokensSum;
+    rmmTokensSums = rmmTokensSum;
     totalTokens = (walletTokensSum + rmmTokensSum).toInt();
     rentedUnits = rentedUnitsSum;
     totalUnits = totalUnitsSum;

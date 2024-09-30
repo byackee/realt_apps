@@ -131,29 +131,63 @@ TabBar(
                         ),
                       ),
                       
-                      // Onglet Insights (Graphique de l'évolution du yield et du prix)
-                      SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Évolution du rendement (Yield)',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            const SizedBox(height: 10),
-                            _buildYieldChartOrMessage(token['historic']?['yields'] ?? [], token['historic']?['init_yield']),
-                            
-                            const SizedBox(height: 20),
+                      // Onglet Insights (Graphique de l'évolution du yield et du prix avec pastille de statut de location)
+SingleChildScrollView(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          // Pastille de couleur en fonction du statut de location
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: getRentalStatusColor(
+                token['rentedUnits'] ?? 0, // Nombre de logements loués
+                token['totalUnits'] ?? 1,  // Nombre total de logements
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Statut de location',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+        ],
+      ),
+      const SizedBox(height: 10),
+      
+      // Ajout du texte pour indiquer le pourcentage des logements loués
+      Text(
+        'Logements loués : ${token['rentedUnits'] ?? 'Non spécifié'} / ${token['totalUnits'] ?? 'Non spécifié'}',
+        style: const TextStyle(fontSize: 13),
+      ),
 
-                            const Text(
-                              'Évolution des prix',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            const SizedBox(height: 10),
-                            _buildPriceChartOrMessage(token['historic']?['prices'] ?? [], token['historic']?['init_price']),
-                          ],
-                        ),
-                      ),
+      const SizedBox(height: 10),
+
+      // Graphique du rendement (Yield)
+      const Text(
+        'Évolution du rendement (Yield)',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      ),
+      const SizedBox(height: 10),
+      _buildYieldChartOrMessage(token['historic']?['yields'] ?? [], token['historic']?['init_yield']),
+      
+      const SizedBox(height: 20),
+
+      // Graphique des prix
+      const Text(
+        'Évolution des prix',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      ),
+      const SizedBox(height: 10),
+      _buildPriceChartOrMessage(token['historic']?['prices'] ?? [], token['historic']?['init_price']),
+    ],
+  ),
+)
+
                     ],
                   ),
                 ),
@@ -262,12 +296,22 @@ Widget _buildYieldChart(List<dynamic> yields) {
   List<String> dateLabels = [];
 
   for (int i = 0; i < yields.length; i++) {
-    DateTime date = DateTime.parse(yields[i]['timsync']);
-    double x = i.toDouble(); // Utiliser un indice pour l'axe X
-    double y = yields[i]['yield']?.toDouble() ?? 0;
+    // Vérifier que 'timsync' est une chaîne de caractères valide pour créer la date
+    if (yields[i]['timsync'] != null && yields[i]['timsync'] is String) {
+      DateTime date = DateTime.parse(yields[i]['timsync']);
+      double x = i.toDouble(); // Utiliser un indice pour l'axe X
 
-    spots.add(FlSpot(x, y));
-    dateLabels.add(DateFormat('MM/yyyy').format(date)); // Ajouter la date formatée en mois/année
+      // Vérification que le yield est bien un nombre et est converti correctement
+      double y = yields[i]['yield'] != null
+          ? double.tryParse(yields[i]['yield'].toString()) ?? 0
+          : 0;
+
+      // Limiter la valeur de `y` à 2 décimales
+      y = double.parse(y.toStringAsFixed(2));
+
+      spots.add(FlSpot(x, y));
+      dateLabels.add(DateFormat('MM/yyyy').format(date)); // Ajouter la date formatée en mois/année
+    }
   }
 
   return SizedBox(
@@ -298,8 +342,9 @@ Widget _buildYieldChart(List<dynamic> yields) {
               showTitles: true,
               reservedSize: 40, // Ajouter un espace réservé pour afficher correctement les valeurs
               getTitlesWidget: (value, meta) {
+                // Limiter les valeurs à 2 décimales pour l'axe des Y
                 return Text(
-                  value.toStringAsFixed(1), // Limiter les décimales à 1 chiffre
+                  value.toStringAsFixed(2), // Limite à 2 décimales
                   style: const TextStyle(fontSize: 10), // Réduire la taille du texte
                 );
               },
@@ -329,6 +374,7 @@ Widget _buildYieldChart(List<dynamic> yields) {
     ),
   );
 }
+
 
 // Méthode pour construire le graphique des prix
 Widget _buildPriceChart(List<dynamic> prices) {
@@ -373,7 +419,7 @@ Widget _buildPriceChart(List<dynamic> prices) {
               reservedSize: 40, // Ajouter un espace réservé pour afficher correctement les valeurs
               getTitlesWidget: (value, meta) {
                 return Text(
-                  value.toStringAsFixed(1), // Limiter les décimales à 1 chiffre
+                  value.toStringAsFixed(2), // Limiter les décimales à 2 chiffres
                   style: const TextStyle(fontSize: 10), // Réduire la taille du texte
                 );
               },
@@ -403,6 +449,18 @@ Widget _buildPriceChart(List<dynamic> prices) {
     ),
   );
 }
+
+// Méthode pour déterminer la couleur de la pastille en fonction du taux de location
+Color getRentalStatusColor(int rentedUnits, int totalUnits) {
+  if (rentedUnits == 0) {
+    return Colors.red; // Aucun logement loué
+  } else if (rentedUnits == totalUnits) {
+    return Colors.green; // Tous les logements sont loués
+  } else {
+    return Colors.orange; // Partiellement loué
+  }
+}
+
 
 // Méthode pour ouvrir une URL dans le navigateur externe
 Future<void> _launchURL(String url) async {

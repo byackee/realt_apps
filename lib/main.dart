@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api/data_manager.dart';
 import 'settings/theme.dart';
 import 'splash_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'generated/l10n.dart'; // Import du fichier généré pour les traductions
 
 void main() async {
   await Hive.initFlutter();
@@ -18,7 +20,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => DataManager()..fetchAndCalculateData()),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
@@ -26,27 +28,39 @@ void main() async {
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  static _MyAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>();
+
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   final ValueNotifier<bool> _isDarkTheme = ValueNotifier(false);
+  Locale? _locale;
 
   @override
   void initState() {
     super.initState();
-    _loadTheme();
+    _loadSettings();
   }
 
-  Future<void> _loadTheme() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkTheme.value = prefs.getBool('isDarkTheme') ?? false;
+    String? languageCode = prefs.getString('language') ?? 'en';
+    setState(() {
+      _locale = Locale(languageCode);
+    });
   }
 
-  Future<void> _saveTheme(bool isDark) async {
+  // Ajout de la méthode pour changer la langue
+  void changeLanguage(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkTheme', isDark);
+    await prefs.setString('language', languageCode);
+    setState(() {
+      _locale = Locale(languageCode);
+    });
   }
 
   @override
@@ -56,15 +70,22 @@ class _MyAppState extends State<MyApp> {
       builder: (context, isDarkTheme, child) {
         return MaterialApp(
           title: 'RealT mobile app',
+          locale: _locale,  // Utiliser la locale définie
+          supportedLocales: S.delegate.supportedLocales,  // Support des langues
+          localizationsDelegates: const [
+            S.delegate,  // Générateur de localisation
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: isDarkTheme ? ThemeMode.dark : ThemeMode.light,
           home: SplashScreen(
             onThemeChanged: (value) {
               _isDarkTheme.value = value;
-              _saveTheme(value);
             },
-          ), // Passe la fonction au SplashScreen
+          ),
         );
       },
     );

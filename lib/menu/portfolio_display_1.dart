@@ -4,52 +4,27 @@ import 'package:intl/intl.dart'; // Import de la bibliothèque intl
 import 'package:url_launcher/url_launcher.dart'; // Import de la bibliothèque url_launcher
 import 'package:RealToken/menu/token_bottom_sheet.dart';
 
-// Fonction de formatage des valeurs monétaires avec des espaces pour les milliers
-String formatCurrency(double value) {
-  final NumberFormat formatter = NumberFormat.currency(
-    locale: 'fr_FR',  // Utilisez 'fr_FR' pour les espaces entre milliers
-    symbol: '\$',     // Symbole de la devise
-    decimalDigits: 2, // Nombre de chiffres après la virgule
-  );
-  return formatter.format(value);
-}
-
 // Fonction pour extraire le nom de la ville à partir du fullName
 String extractCity(String fullName) {
   List<String> parts = fullName.split(',');
   return parts.length >= 2 ? parts[1].trim() : 'Ville inconnue';
 }
 
+// Fonction pour déterminer la couleur de la pastille en fonction du taux de location
+Color getRentalStatusColor(int rentedUnits, int totalUnits) {
+  if (rentedUnits == 0) {
+    return Colors.red; // Aucun logement loué
+  } else if (rentedUnits == totalUnits) {
+    return Colors.green; // Tous les logements sont loués
+  } else {
+    return Colors.orange; // Partiellement loué
+  }
+}
+
 class PortfolioDisplay1 extends StatelessWidget {
   final List<Map<String, dynamic>> portfolio;
 
   const PortfolioDisplay1({Key? key, required this.portfolio}) : super(key: key);
-
-  // Méthode pour ouvrir une URL dans le navigateur externe
-  Future<void> _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url); // Ouvrir le lien dans le navigateur
-    } else {
-      throw 'Impossible d\'ouvrir l\'URL: $url'; // Gérer l'erreur si l'URL ne peut pas être ouverte
-    }
-  }
-
-  // Méthode pour construire les lignes de détails
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-          Text(value, style: const TextStyle(fontSize: 13)),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +34,15 @@ class PortfolioDisplay1 extends StatelessWidget {
         padding: const EdgeInsets.only(top: 20),
         itemCount: portfolio.length,
         itemBuilder: (context, index) {
+          // Récupération des données pour chaque élément du portefeuille
           final token = portfolio[index];
-          final isWallet = token['source'] == 'Wallet'; 
-          final isRMM = token['source'] == 'RMM'; 
+          final isWallet = token['source'] == 'Wallet';
+          final isRMM = token['source'] == 'RMM';
           final city = extractCity(token['fullName'] ?? '');
+
+          // Récupération des unités louées et totales pour déterminer la couleur de la pastille
+          final rentedUnits = token['rentedUnits'] ?? 0;
+          final totalUnits = token['totalUnits'] ?? 1;
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -95,22 +75,45 @@ class PortfolioDisplay1 extends StatelessWidget {
                                       const Icon(Icons.error),
                                 ),
                               ),
-                              // Superposition du texte de la ville en bas de l'image
+                              // Superposition du texte de la ville et pastille de location
                               Positioned(
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
-                                  color: Colors.black54, 
-                                  child: Text(
-                                    city,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
+                                  color: Colors.black54,
+                                  child: Stack(
+                                    children: [
+                                      // Pastille pour indiquer le statut de location, alignée tout à gauche
+                                      Positioned(
+                                        left: 0, // Position tout à gauche
+                                        top: 0, // Aligner verticalement au centre
+                                        bottom: 0,
+                                        child: Container(
+                                          width: 12, // Taille réduite de la pastille
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: getRentalStatusColor(
+                                              rentedUnits, totalUnits,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Texte de la ville centré indépendamment de la pastille
+                                      Center(
+                                        child: Text(
+                                          city,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -149,9 +152,9 @@ class PortfolioDisplay1 extends StatelessWidget {
                                             horizontal: 6.0, vertical: 3.0),
                                         decoration: BoxDecoration(
                                           color: isWallet
-                                              ? Colors.green
+                                              ? Colors.grey
                                               : isRMM
-                                                  ? Colors.blue
+                                                  ? Color.fromARGB(255, 165, 100, 21)
                                                   : Colors.grey,
                                           shape: BoxShape.rectangle,
                                           borderRadius: BorderRadius.circular(8.0),
