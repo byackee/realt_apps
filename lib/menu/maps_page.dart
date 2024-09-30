@@ -3,7 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 import 'package:latlong2/latlong.dart';
-import '../API/api_service.dart';
+import '../api/api_service.dart';
 
 class MapsPage extends StatefulWidget {
   const MapsPage({super.key});

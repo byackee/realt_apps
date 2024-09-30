@@ -54,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ? Colors.black.withOpacity(0.3) 
                         : Colors.white.withOpacity(0.3),
                   child: AppBar(
+                    forceMaterialTransparency: true,
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                   ),
@@ -70,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  height: 91, // Ajuste cette hauteur selon tes besoins
+                  height: 60, // Ajuste cette hauteur selon tes besoins
                   color: Theme.of(context).brightness == Brightness.dark 
                         ? Colors.black.withOpacity(0.3) 
                         : Colors.white.withOpacity(0.3),

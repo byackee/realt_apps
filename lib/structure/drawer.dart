@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart'; // Importer url_launcher pour ouvrir des liens externes
+import 'package:url_launcher/url_launcher.dart';  // Importer url_launcher pour ouvrir des liens externes
 import '../settings/settings_page.dart';  // Importer la page des paramètres
 import '../real_tokens_page.dart';  // Importer la page des RealTokens
 import '../about.dart';  // Importer la page About
+import '../updates_page.dart';  // Importer la page des mises à jour
 
 class CustomDrawer extends StatelessWidget {
   final Function(bool) onThemeChanged;
@@ -21,11 +22,10 @@ class CustomDrawer extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Agrandissement de l'icône pour qu'elle corresponde à la hauteur des deux textes
                 Image.asset(
                   'assets/logo.png',
-                  width: 60,  // Ajuster la largeur de l'icône
-                  height: 60, // Ajuster la hauteur de l'icône
+                  width: 60,
+                  height: 60,
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -42,8 +42,8 @@ class CustomDrawer extends StatelessWidget {
                     Text(
                       'mobile app for Community',
                       style: TextStyle(
-                        color: Colors.white70,  // Couleur légèrement plus claire
-                        fontSize: 16,  // Taille légèrement plus petite
+                        color: Colors.white70,
+                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -65,6 +65,19 @@ class CustomDrawer extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.update),
+            title: const Text('Modifications récentes'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UpdatesPage(),
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
             onTap: () {
@@ -77,8 +90,8 @@ class CustomDrawer extends StatelessWidget {
               );
             },
           ),
-          const Spacer(),  // Utilisé pour pousser les éléments vers le bas
-          const Divider(),  // Séparation visuelle
+          const Spacer(),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
@@ -99,13 +112,12 @@ class CustomDrawer extends StatelessWidget {
               _launchFeedbackURL();
             },
           ),
-          const SizedBox(height: 20),  // Ajout d'un espace vide pour remonter les éléments
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // Fonction pour ouvrir le lien Feedback dans le navigateur
   void _launchFeedbackURL() async {
     const url = 'https://github.com/RealToken-Community/realtoken-apps/issues';
     if (await canLaunch(url)) {

@@ -14,11 +14,16 @@ String formatCurrency(double value) {
   return formatter.format(value);
 }
 
+// Fonction pour extraire le nom de la ville à partir du fullName
+String extractCity(String fullName) {
+  List<String> parts = fullName.split(',');
+  return parts.length >= 2 ? parts[1].trim() : 'Ville inconnue';
+}
+
 class PortfolioDisplay1 extends StatelessWidget {
   final List<Map<String, dynamic>> portfolio;
 
   const PortfolioDisplay1({Key? key, required this.portfolio}) : super(key: key);
-
 
   // Méthode pour ouvrir une URL dans le navigateur externe
   Future<void> _launchURL(String url) async {
@@ -38,9 +43,9 @@ class PortfolioDisplay1 extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), // Taille réduite de 14 à 13
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
-          Text(value, style: const TextStyle(fontSize: 13)), // Taille réduite de 14 à 13
+          Text(value, style: const TextStyle(fontSize: 13)),
         ],
       ),
     );
@@ -55,41 +60,69 @@ class PortfolioDisplay1 extends StatelessWidget {
         itemCount: portfolio.length,
         itemBuilder: (context, index) {
           final token = portfolio[index];
-          final isWallet = token['source'] == 'Wallet'; // Vérification de la source Wallet
-          final isRMM = token['source'] == 'RMM'; // Vérification de la source RMM
+          final isWallet = token['source'] == 'Wallet'; 
+          final isRMM = token['source'] == 'RMM'; 
+          final city = extractCity(token['fullName'] ?? '');
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               children: [
                 GestureDetector(
-                  onTap: () => showTokenDetails(context, token), // Utilisation de la modal réutilisable
+                  onTap: () => showTokenDetails(context, token),
                   child: IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Image ajustée à la même hauteur que la carte, arrondie seulement à gauche
+                        // Conteneur avec image et superposition du texte de la ville
                         ClipRRect(
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(12),
                             bottomLeft: Radius.circular(12),
                           ),
-                          child: CachedNetworkImage(
-                            imageUrl: token['imageLink'] ?? '',
-                            width: 150,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                const CircularProgressIndicator(), // Placeholder pendant le chargement
-                            errorWidget: (context, url, error) =>
-                                const Icon(Icons.error), // En cas d'erreur
+                          child: Stack(
+                            children: [
+                              // Image de l'avatar avec hauteur fixe
+                              Container(
+                                width: 150,
+                                height: double.infinity,  // Hauteur ajustée à l'élément adjacent
+                                child: CachedNetworkImage(
+                                  imageUrl: token['imageLink'] ?? '',
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      const CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
+                                ),
+                              ),
+                              // Superposition du texte de la ville en bas de l'image
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  color: Colors.black54, 
+                                  child: Text(
+                                    city,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         Expanded(
-                          // Carte à droite de l'image, arrondie seulement à droite
+                          // Carte à droite de l'image
                           child: Card(
-                            elevation: 0, // Enlever l'ombre
-                            margin: EdgeInsets.zero, // Enlever l'espace entre l'image et la carte
-                            color: Theme.of(context).cardColor, // Applique la couleur du thème pour la carte
+                            elevation: 0,
+                            margin: EdgeInsets.zero,
+                            color: Theme.of(context).cardColor,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.only(
                                 topRight: Radius.circular(12),
@@ -119,7 +152,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                               ? Colors.green
                                               : isRMM
                                                   ? Colors.blue
-                                                  : Colors.grey, // Couleur selon la source
+                                                  : Colors.grey,
                                           shape: BoxShape.rectangle,
                                           borderRadius: BorderRadius.circular(8.0),
                                         ),
@@ -128,7 +161,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                               ? 'Wallet'
                                               : isRMM
                                                   ? 'RMM'
-                                                  : 'Other', // Texte selon la source
+                                                  : 'Other',
                                           style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,

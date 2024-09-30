@@ -34,13 +34,18 @@ class DataManager extends ChangeNotifier {
 
   List<Map<String, dynamic>> get portfolio => _portfolio;
 
+  // Ajout des données pour les mises à jour récentes
+  List<Map<String, dynamic>> _recentUpdates = [];
+
+  List<Map<String, dynamic>> get recentUpdates => _recentUpdates;
+
   final String rwaTokenAddress = '0x0675e8f4a52ea6c845cb6427af03616a2af42170';
 
   // Méthode pour récupérer et calculer les données pour le Dashboard et Portfolio
   Future<void> fetchAndCalculateData() async {
     final walletTokens = await ApiService.fetchTokens();
     final rmmTokens = await ApiService.fetchRMMTokens();
-    final realTokens = await ApiService.fetchRealTokens();
+    final realTokens = await ApiService.fetchRealTokens(); // Garder realTokens en List<dynamic>
 
     // Variables temporaires
     double walletValueSum = 0;
@@ -61,19 +66,19 @@ class DataManager extends ChangeNotifier {
     walletTokenCount = 0;
     rmmTokenCount = 0;
 
-    if (walletTokens != null && rmmTokens != null && realTokens != null) {
+    if (walletTokens.isNotEmpty && rmmTokens.isNotEmpty && realTokens.isNotEmpty) {
       final walletBalances = walletTokens[0]['balances'];
       final rmmBalances = rmmTokens;
 
       // Process wallet tokens (pour Dashboard et Portfolio)
       for (var walletToken in walletBalances) {
         final tokenAddress = walletToken['token']['address'].toLowerCase();
-        final matchingRealToken = realTokens.firstWhere(
+        final matchingRealToken = realTokens.cast<Map<String, dynamic>>().firstWhere(
           (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-          orElse: () => null,
+          orElse: () => <String, dynamic>{},
         );
 
-        if (matchingRealToken != null) {
+        if (matchingRealToken.isNotEmpty) {
           final double tokenPrice = matchingRealToken['tokenPrice'];
           final double tokenValue = double.parse(walletToken['amount']) * tokenPrice;
 
@@ -124,6 +129,7 @@ class DataManager extends ChangeNotifier {
             'squareFeet': matchingRealToken['squareFeet'],
             'marketplaceLink': matchingRealToken['marketplaceLink'],
             'propertyType': matchingRealToken['propertyType'],
+            'historic': matchingRealToken['historic'],
           });
         }
       }
@@ -131,12 +137,12 @@ class DataManager extends ChangeNotifier {
       // Process RMM tokens (pour Dashboard et Portfolio)
       for (var rmmToken in rmmBalances) {
         final tokenAddress = rmmToken['token']['id'].toLowerCase();
-        final matchingRealToken = realTokens.firstWhere(
+        final matchingRealToken = realTokens.cast<Map<String, dynamic>>().firstWhere(
           (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-          orElse: () => null,
+          orElse: () => <String, dynamic>{},
         );
 
-        if (matchingRealToken != null) {
+        if (matchingRealToken.isNotEmpty) {
           final BigInt rawAmount = BigInt.parse(rmmToken['amount']);
           final int decimals = matchingRealToken['decimals'] ?? 18;
           final double amount = rawAmount / BigInt.from(10).pow(decimals);
@@ -184,9 +190,13 @@ class DataManager extends ChangeNotifier {
             'squareFeet': matchingRealToken['squareFeet'],
             'marketplaceLink': matchingRealToken['marketplaceLink'],
             'propertyType': matchingRealToken['propertyType'],
+            'historic': matchingRealToken['historic'],
           });
         }
       }
+
+      // Extraire les mises à jour récentes (update30)
+      _recentUpdates = _extractRecentUpdates(realTokens);
     }
 
     // Mise à jour des variables pour le Dashboard
@@ -212,6 +222,65 @@ class DataManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Méthode pour extraire les mises à jour récentes sur les 30 derniers jours
+  List<Map<String, dynamic>> _extractRecentUpdates(List<dynamic> realTokensRaw) {
+  final List<Map<String, dynamic>> realTokens = realTokensRaw.cast<Map<String, dynamic>>();
+
+  List<Map<String, dynamic>> recentUpdates = [];
+
+  for (var token in realTokens) {
+    if (token.containsKey('update30')) {
+      final String shortName = token['shortName'] ?? 'Nom inconnu';
+      final String imageLink = token['imageLink'] != null && token['imageLink'].isNotEmpty 
+          ? token['imageLink'][0] // Prendre la première image si disponible
+          : 'Lien d\'image non disponible';
+
+      List<Map<String, dynamic>> updatesWithDetails = List<Map<String, dynamic>>.from(token['update30']).where((update) {
+        return update['key'] == 'netRentYearPerToken' || update['key'] == 'annualPercentageYield';
+      }).map((update) {
+        // Initialiser les variables avec des valeurs par défaut
+        String formattedKey = 'Donnée inconnue';
+        String formattedOldValue = 'Valeur inconnue';
+        String formattedNewValue = 'Valeur inconnue';
+
+        if (update['key'] == 'netRentYearPerToken') {
+          // Arrondir la valeur à deux chiffres après la virgule
+          double newValue = double.tryParse(update['new_value']) ?? 0.0;
+          double oldValue = double.tryParse(update['old_value']) ?? 0.0;
+          formattedKey = 'Net Rent Per Token (Annuel)';
+          formattedOldValue = "${oldValue.toStringAsFixed(2)} USD";
+          formattedNewValue = "${newValue.toStringAsFixed(2)} USD";
+        } else if (update['key'] == 'annualPercentageYield') {
+          // Arrondir la valeur à deux chiffres après la virgule
+          double newValue = double.tryParse(update['new_value']) ?? 0.0;
+          double oldValue = double.tryParse(update['old_value']) ?? 0.0;
+          formattedKey = 'Rendement Annuel (%)';
+          formattedOldValue = "${oldValue.toStringAsFixed(2)}%";
+          formattedNewValue = "${newValue.toStringAsFixed(2)}%";
+        }
+
+        return {
+          'shortName': shortName,
+          'formattedKey': formattedKey,
+          'formattedOldValue': formattedOldValue,
+          'formattedNewValue': formattedNewValue,
+          'timsync': update['timsync'],
+          'imageLink': imageLink, // Ajout de l'image du token
+        };
+      }).toList();
+
+      recentUpdates.addAll(updatesWithDetails);
+    }
+  }
+
+  // Trier les mises à jour par date
+  recentUpdates.sort((a, b) => DateTime.parse(b['timsync']).compareTo(DateTime.parse(a['timsync'])));
+
+  return recentUpdates;
+}
+
+
+
   // Méthode pour récupérer les données des loyers
   Future<void> fetchRentData() async {
     try {
@@ -231,6 +300,8 @@ class DataManager extends ChangeNotifier {
       final rmmTokens = await ApiService.fetchRMMTokens();
       final realTokens = await ApiService.fetchRealTokens();
 
+      final List<Map<String, dynamic>> realTokensCasted = realTokens.cast<Map<String, dynamic>>();
+
       // Fusionner les tokens du portefeuille et du RMM
       List<dynamic> allTokens = [...walletTokens[0]['balances'], ...rmmTokens];
       List<Map<String, dynamic>> propertyData = [];
@@ -241,12 +312,12 @@ class DataManager extends ChangeNotifier {
           final tokenAddress = token['token']['address'].toLowerCase();
 
           // Correspondre avec les RealTokens
-          final matchingRealToken = realTokens.firstWhere(
+          final matchingRealToken = realTokens.cast<Map<String, dynamic>>().firstWhere(
             (realToken) => realToken['uuid'].toLowerCase() == tokenAddress,
-            orElse: () => null,
+            orElse: () => <String, dynamic>{},
           );
 
-          if (matchingRealToken != null && matchingRealToken['propertyType'] != null) {
+          if (matchingRealToken.isNotEmpty && matchingRealToken['propertyType'] != null) {
             final propertyType = matchingRealToken['propertyType'];
 
             // Vérifiez si le type de propriété existe déjà dans propertyData

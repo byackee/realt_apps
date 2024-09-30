@@ -3,8 +3,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api/data_manager.dart';
-import 'structure/home_page.dart'; // Importer la page principale
-import 'settings/theme.dart'; // Importer la gestion des thèmes
+import 'settings/theme.dart';
+import 'splash_screen.dart';
 
 void main() async {
   await Hive.initFlutter();
@@ -59,12 +59,12 @@ class _MyAppState extends State<MyApp> {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: isDarkTheme ? ThemeMode.dark : ThemeMode.light,
-          home: MyHomePage(
+          home: SplashScreen(
             onThemeChanged: (value) {
               _isDarkTheme.value = value;
               _saveTheme(value);
             },
-          ),
+          ), // Passe la fonction au SplashScreen
         );
       },
     );
