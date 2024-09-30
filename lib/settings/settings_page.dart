@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'manage_eth_addresses_page.dart'; // Import de la page
+import 'manage_evm_addresses_page.dart'; // Import de la page
 
 class SettingsPage extends StatefulWidget {
   final Function(bool) onThemeChanged;
@@ -92,12 +92,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              title: const Text('Manage Ethereum Addresses'),
+              title: const Text('Manage EVM Addresses'),
               trailing: const Icon(Icons.arrow_forward),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ManageEthAddressesPage()),
+                  MaterialPageRoute(builder: (context) => const ManageEvmAddressesPage()),
                 );
               },
             ),

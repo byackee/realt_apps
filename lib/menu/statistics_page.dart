@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'data_manager.dart';
+import '../api/data_manager.dart';
 
 class StatisticsPage extends StatefulWidget {
   const StatisticsPage({Key? key}) : super(key: key);
@@ -101,124 +101,135 @@ class _StatisticsPageState extends State<StatisticsPage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              Card(
-                elevation: 0,
-                color: Theme.of(context).cardColor,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Graphique des loyers perçus',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildPeriodSelector(),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 300,
-                        child: LineChart(
-                          LineChartData(
-                            gridData: FlGridData(show: true),
-                            titlesData: FlTitlesData(
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: false,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0), // Padding standard de chaque côté
+                child: Card(
+                  elevation: 0,
+                  color: Theme.of(context).cardColor,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Graphique des loyers perçus',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildPeriodSelector(),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 300,
+                          child: LineChart(
+                            LineChartData(
+                              gridData: FlGridData(show: true),
+                              titlesData: FlTitlesData(
+                                topTitles: AxisTitles( // Suppression de l'échelle du haut
+                                  sideTitles: SideTitles(
+                                    showTitles: false,
+                                  ),
                                 ),
-                              ),
-                              rightTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: (groupedData.isNotEmpty
-                                          ? (groupedData.length / 5).round()
-                                          : 1)
-                                      .toDouble(),
-                                  getTitlesWidget: (value, meta) {
-                                    return Text(
-                                      value.toStringAsFixed(0),
-                                      style: const TextStyle(fontSize: 10),
-                                    );
-                                  },
-                                ),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: (groupedData.isNotEmpty
-                                          ? (groupedData.length / 6).round()
-                                          : 1)
-                                      .toDouble(),
-                                  getTitlesWidget: (value, meta) {
-                                    List<String> labels = _buildDateLabels(groupedData);
-                                    if (value.toInt() >= 0 && value.toInt() < labels.length) {
-                                      return Transform.rotate(
-                                        angle: -0.5,
-                                        child: Text(
-                                          labels[value.toInt()],
-                                          style: const TextStyle(fontSize: 8),
-                                        ),
+                                leftTitles: AxisTitles( // Déplacement de l'échelle à gauche
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: (groupedData.isNotEmpty
+                                            ? (groupedData.length / 5).round()
+                                            : 1)
+                                        .toDouble(),
+                                    getTitlesWidget: (value, meta) {
+                                      return Text(
+                                        value.toStringAsFixed(0),
+                                        style: const TextStyle(fontSize: 10),
                                       );
-                                    } else {
-                                      return const Text('');
-                                    }
-                                  },
+                                    },
+                                  ),
+                                ),
+                                rightTitles: AxisTitles( // Suppression de l'échelle de droite
+                                  sideTitles: SideTitles(
+                                    showTitles: false,
+                                  ),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: (groupedData.isNotEmpty
+                                            ? (groupedData.length / 6).round()
+                                            : 1)
+                                        .toDouble(),
+                                    getTitlesWidget: (value, meta) {
+                                      List<String> labels = _buildDateLabels(groupedData);
+                                      if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                                        return Transform.rotate(
+                                          angle: -0.5,
+                                          child: Text(
+                                            labels[value.toInt()],
+                                            style: const TextStyle(fontSize: 8),
+                                          ),
+                                        );
+                                      } else {
+                                        return const Text('');
+                                      }
+                                    },
+                                  ),
                                 ),
                               ),
-                            ),
-                            borderData: FlBorderData(
-                              show: false,
-                            ),
-                            minX: 0,
-                            maxX: (groupedData.length - 1).toDouble(),
-                            minY: 0,
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: _buildChartData(groupedData),
-                                isCurved: true,
-                                barWidth: 3,
-                                color: Colors.blue,
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  color: Colors.blue.withOpacity(0.3),
-                                ),
+                              borderData: FlBorderData(
+                                show: false,
                               ),
-                            ],
+                              minX: 0,
+                              maxX: (groupedData.length - 1).toDouble(),
+                              minY: 0,
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: _buildChartData(groupedData),
+                                  isCurved: true,
+                                  barWidth: 3,
+                                  color: Colors.blue,
+                                  belowBarData: BarAreaData(
+                                    show: true,
+                                    color: Colors.blue.withOpacity(0.3),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Card(
-                elevation: 0,
-                color: Theme.of(context).cardColor,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Répartition des Tokens par Type de Propriété',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10), // Réduire l'espace ici
-                      SizedBox(
-                        height: 300,
-                        child: PieChart(
-                          PieChartData(
-                            sections: _buildDonutChartData(dataManager),
-                            centerSpaceRadius: 50,
-                            sectionsSpace: 2,
-                            borderData: FlBorderData(show: false),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0), // Padding standard de chaque côté
+                child: Card(
+                  elevation: 0,
+                  color: Theme.of(context).cardColor,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Répartition des Tokens par Type de Propriété',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 300,
+                          child: PieChart(
+                            PieChartData(
+                              sections: _buildDonutChartData(dataManager),
+                              centerSpaceRadius: 50,
+                              sectionsSpace: 2,
+                              borderData: FlBorderData(show: false),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10), // Ajuster cet espace également
-                      _buildLegend(dataManager),
-                    ],
+                        const SizedBox(height: 10),
+                        _buildLegend(dataManager),
+                      ],
+                    ),
                   ),
                 ),
               ),

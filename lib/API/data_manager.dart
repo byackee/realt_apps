@@ -23,6 +23,10 @@ class DataManager extends ChangeNotifier {
   List<Map<String, dynamic>> rentData = [];
   List<Map<String, dynamic>> propertyData = [];
 
+  // Ajout des variables pour compter les tokens dans le wallet et RMM
+  int walletTokenCount = 0;
+  int rmmTokenCount = 0;
+
   bool isLoading = true;
 
   // Portfolio data for PortfolioPage
@@ -53,6 +57,10 @@ class DataManager extends ChangeNotifier {
     int yieldCount = 0;
     List<Map<String, dynamic>> newPortfolio = [];
 
+    // Réinitialisation des compteurs de tokens
+    walletTokenCount = 0;
+    rmmTokenCount = 0;
+
     if (walletTokens != null && rmmTokens != null && realTokens != null) {
       final walletBalances = walletTokens[0]['balances'];
       final rmmBalances = rmmTokens;
@@ -77,6 +85,7 @@ class DataManager extends ChangeNotifier {
           } else {
             walletValueSum += tokenValue;
             walletTokensSum += double.parse(walletToken['amount']);
+            walletTokenCount++; // Incrémenter le compteur de tokens du wallet
 
             annualYieldSum += matchingRealToken['annualPercentageYield'];
             yieldCount++;
@@ -134,6 +143,7 @@ class DataManager extends ChangeNotifier {
           final double tokenPrice = matchingRealToken['tokenPrice'];
           rmmValueSum += amount * tokenPrice;
           rmmTokensSum += amount;
+          rmmTokenCount++; // Incrémenter le compteur de tokens du RMM
 
           rentedUnitsSum += (matchingRealToken['rentedUnits'] ?? 0) as int;
           totalUnitsSum += (matchingRealToken['totalUnits'] ?? 0) as int;
@@ -205,9 +215,7 @@ class DataManager extends ChangeNotifier {
   // Méthode pour récupérer les données des loyers
   Future<void> fetchRentData() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      List<String> wallets = prefs.getStringList('ethAddresses') ?? [];
-      List<Map<String, dynamic>> rentData = await ApiService.fetchRentData(wallets);
+      List<Map<String, dynamic>> rentData = await ApiService.fetchRentData();
       this.rentData = rentData;
     } catch (e) {
       print("Error fetching rent data: $e");

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import de la bibliothèque url_launcher
-import 'api_service.dart';
+import 'API/api_service.dart';
 
 String formatCurrency(double value) {
   final NumberFormat formatter = NumberFormat.currency(

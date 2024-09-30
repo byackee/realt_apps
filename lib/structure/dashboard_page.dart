@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'data_manager.dart';
+import '../api/data_manager.dart';
 import 'package:intl/intl.dart';
 
 // Fonction de formatage des valeurs monétaires avec des espaces pour les milliers
@@ -26,7 +26,9 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     final dataManager = Provider.of<DataManager>(context, listen: false);
-    //dataManager.fetchRentData(); // Lancer fetchRentData à l'ouverture du Dashboard
+    dataManager.fetchAndCalculateData(); // Charger les données du portefeuille
+    dataManager.fetchRentData();
+    dataManager.fetchPropertyData();
   }
 
   // Récupère la dernière valeur de loyer
@@ -253,6 +255,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 _buildValueBeforeText(
                     '${(dataManager.rentedUnits / dataManager.totalUnits * 100).toStringAsFixed(2)}%', 'Rented'),
                 [
+                  Text('Proporties: ${(dataManager.walletTokenCount +dataManager.rmmTokenCount)}',
+                      style: const TextStyle(fontSize: 13)),
+                   Text('  Wallet: ${dataManager.walletTokenCount}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('  RMM: ${dataManager.rmmTokenCount.toInt()}',
+                      style: const TextStyle(fontSize: 13)),
                   Text('Rented Units: ${dataManager.rentedUnits} / ${dataManager.totalUnits}',
                       style: const TextStyle(fontSize: 13)),
                 ],
@@ -265,9 +273,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.account_balance_wallet,
                 _buildValueBeforeText('${dataManager.totalTokens}', 'Total Tokens'),
                 [
-                  Text('Wallet: ${formatCurrency(dataManager.walletTokensSum)}',
+                  Text('  Wallet: ${dataManager.walletTokensSum}',
                       style: const TextStyle(fontSize: 13)),
-                  Text('RMM: ${formatCurrency(dataManager.rmmTokensSum)}',
+                  Text('  RMM: ${dataManager.rmmTokensSum}',
                       style: const TextStyle(fontSize: 13)),
                 ],
                 dataManager,

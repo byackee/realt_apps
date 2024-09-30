@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import de SharedPreferences
-import 'data_manager.dart'; // Import du DataManager
+import '../api/data_manager.dart'; // Import du DataManager
 import 'portfolio_display_1.dart';
 import 'portfolio_display_2.dart';
 
