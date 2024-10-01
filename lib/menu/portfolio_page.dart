@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/data_manager.dart'; 
 import 'portfolio_display_1.dart';
 import 'portfolio_display_2.dart';
+import '../generated/l10n.dart'; // Import pour les traductions
 
 class PortfolioPage extends StatefulWidget {
   const PortfolioPage({super.key});
@@ -53,17 +54,17 @@ class _PortfolioPageState extends State<PortfolioPage> {
         .where((token) =>
             token['fullName'].toLowerCase().contains(_searchQuery.toLowerCase()) &&
             (_selectedCity == null || token['fullName'].contains(_selectedCity!)) &&
-            (_rentalStatusFilter == 'All' || _filterByRentalStatus(token)))
+            (_rentalStatusFilter == S.of(context).rentalStatusAll || _filterByRentalStatus(token)))
         .toList();
 
-    if (_sortOption == 'Name') {
+    if (_sortOption == S.of(context).sortByName) {
       filteredPortfolio.sort((a, b) =>
           _isAscending ? a['shortName'].compareTo(b['shortName']) : b['shortName'].compareTo(a['shortName']));
-    } else if (_sortOption == 'Value') {
+    } else if (_sortOption == S.of(context).sortByValue) {
       filteredPortfolio.sort((a, b) => _isAscending
           ? a['totalValue'].compareTo(b['totalValue'])
           : b['totalValue'].compareTo(a['totalValue']));
-    } else if (_sortOption == 'APY') {
+    } else if (_sortOption == S.of(context).sortByAPY) {
       filteredPortfolio.sort((a, b) => _isAscending
           ? a['annualPercentageYield'].compareTo(b['annualPercentageYield'])
           : b['annualPercentageYield'].compareTo(a['annualPercentageYield']));
@@ -77,11 +78,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
     int rentedUnits = token['rentedUnits'] ?? 0;
     int totalUnits = token['totalUnits'] ?? 1;
 
-    if (_rentalStatusFilter == 'Loué') {
+    if (_rentalStatusFilter == S.of(context).rentalStatusRented) {
       return rentedUnits == totalUnits;
-    } else if (_rentalStatusFilter == 'Partiellement Loué') {
+    } else if (_rentalStatusFilter == S.of(context).rentalStatusPartiallyRented) {
       return rentedUnits > 0 && rentedUnits < totalUnits;
-    } else if (_rentalStatusFilter == 'Pas Loué') {
+    } else if (_rentalStatusFilter == S.of(context).rentalStatusNotRented) {
       return rentedUnits == 0;
     }
     return true;
@@ -91,7 +92,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
   List<String> _getUniqueCities(List<Map<String, dynamic>> portfolio) {
     final cities = portfolio.map((token) {
       List<String> parts = token['fullName'].split(',');
-      return parts.length >= 2 ? parts[1].trim() : 'Ville inconnue';
+      return parts.length >= 2 ? parts[1].trim() : S.of(context).unknownCity;
     }).toSet().toList();
     cities.sort(); 
     return cities;
@@ -125,7 +126,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
                               });
                             },
                             decoration: InputDecoration(
-                              hintText: 'Search...',
+                              hintText: S.of(context).searchHint, // "Search..."
                               prefixIcon: const Icon(Icons.search),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30.0),
@@ -144,14 +145,14 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           icon: const Icon(Icons.location_city),
                           onSelected: (String value) {
                             setState(() {
-                              _selectedCity = value == 'All' ? null : value;
+                              _selectedCity = value == S.of(context).allCities ? null : value;
                             });
                           },
                           itemBuilder: (BuildContext context) {
                             return [
-                              const PopupMenuItem(
-                                value: 'All',
-                                child: Text('All Cities'),
+                              PopupMenuItem(
+                                value: S.of(context).allCities,
+                                child: Text(S.of(context).allCities),
                               ),
                               ...uniqueCities.map((city) => PopupMenuItem(
                                     value: city,
@@ -172,21 +173,21 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           },
                           itemBuilder: (BuildContext context) {
                             return [
-                              const PopupMenuItem(
-                                value: 'All',
-                                child: Text('All'),
+                              PopupMenuItem(
+                                value: S.of(context).rentalStatusAll,
+                                child: Text(S.of(context).rentalStatusAll),
                               ),
-                              const PopupMenuItem(
-                                value: 'Loué',
-                                child: Text('Loué'),
+                              PopupMenuItem(
+                                value: S.of(context).rentalStatusRented,
+                                child: Text(S.of(context).rentalStatusRented),
                               ),
-                              const PopupMenuItem(
-                                value: 'Partiellement Loué',
-                                child: Text('Partiellement Loué'),
+                              PopupMenuItem(
+                                value: S.of(context).rentalStatusPartiallyRented,
+                                child: Text(S.of(context).rentalStatusPartiallyRented),
                               ),
-                              const PopupMenuItem(
-                                value: 'Pas Loué',
-                                child: Text('Pas Loué'),
+                              PopupMenuItem(
+                                value: S.of(context).rentalStatusNotRented,
+                                child: Text(S.of(context).rentalStatusNotRented),
                               ),
                             ];
                           },
@@ -205,28 +206,28 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           },
                           itemBuilder: (BuildContext context) {
                             return [
-                              const PopupMenuItem(
-                                value: 'Name',
-                                child: Text('Sort by Name'),
+                              PopupMenuItem(
+                                value: S.of(context).sortByName,
+                                child: Text(S.of(context).sortByName),
                               ),
-                              const PopupMenuItem(
-                                value: 'Value',
-                                child: Text('Sort by Value'),
+                              PopupMenuItem(
+                                value: S.of(context).sortByValue,
+                                child: Text(S.of(context).sortByValue),
                               ),
-                              const PopupMenuItem(
-                                value: 'APY',
-                                child: Text('Sort by APY'),
+                              PopupMenuItem(
+                                value: S.of(context).sortByAPY,
+                                child: Text(S.of(context).sortByAPY),
                               ),
                               const PopupMenuDivider(),
                               CheckedPopupMenuItem(
                                 value: 'asc',
                                 checked: _isAscending,
-                                child: const Text('Ascending'),
+                                child: Text(S.of(context).ascending),
                               ),
                               CheckedPopupMenuItem(
                                 value: 'desc',
                                 checked: !_isAscending,
-                                child: const Text('Descending'),
+                                child: Text(S.of(context).descending),
                               ),
                             ];
                           },

@@ -23,14 +23,15 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  @override
-  void initState() {
-    super.initState();
-    final dataManager = Provider.of<DataManager>(context, listen: false);
-    dataManager.fetchAndCalculateData(); // Charger les données du portefeuille
-    dataManager.fetchRentData();
-    dataManager.fetchPropertyData();
-  }
+
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  final dataManager = Provider.of<DataManager>(context, listen: false);
+  dataManager.fetchAndCalculateData(); // Charger les données du portefeuille
+  dataManager.fetchRentData(); // Charger les données de loyer
+  dataManager.fetchPropertyData(); // Charger les données de propriété
+}
 
   // Récupère la dernière valeur de loyer
   String _getLastRentReceived(DataManager dataManager) {
@@ -302,6 +303,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 context,
                 hasGraph: true, // Seule la carte "Rendement" aura un graphique
               ),
+              const SizedBox(height: 80), // Ajout d'un padding en bas pour laisser de l'espace pour la BottomBar
             ],
           ),
         ),

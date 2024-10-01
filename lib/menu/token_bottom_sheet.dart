@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../generated/l10n.dart'; // Import pour les traductions
 
 // Fonction de formatage des valeurs monétaires avec des espaces pour les milliers
 String formatCurrency(double value) {
@@ -39,29 +40,26 @@ void showTokenDetails(BuildContext context, Map<String, dynamic> token) {
                 const SizedBox(height: 10),
                 
                 // Titre du token
-                // Titre du token
-Center(
-  child: Text(
-    token['fullName'],
-    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-  ),
-),
+                Center(
+                  child: Text(
+                    token['fullName'],
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ),
 
-// Ajuste ou supprime cette SizedBox pour réduire l'espacement
-const SizedBox(height: 5), // Réduit l'espacement ou retire cette ligne
+                const SizedBox(height: 5), // Réduit l'espacement
 
-// TabBar pour les différents onglets
-TabBar(
-  labelColor: Theme.of(context).primaryColor,
-  unselectedLabelColor: Colors.grey,
-  tabs: const [
-    Tab(text: 'Propriétés'),
-    Tab(text: 'Finances'),
-    Tab(text: 'Autres'),
-    Tab(text: 'Insights'),
-  ],
-),
-
+                // TabBar pour les différents onglets
+                TabBar(
+                  labelColor: Theme.of(context).primaryColor,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: [
+                    Tab(text: S.of(context).properties), // Utilisation de la traduction
+                    Tab(text: S.of(context).finances), // Utilisation de la traduction
+                    Tab(text: S.of(context).others), // Utilisation de la traduction
+                    Tab(text: S.of(context).insights), // Utilisation de la traduction
+                  ],
+                ),
                 
                 const SizedBox(height: 10),
                 
@@ -75,26 +73,26 @@ TabBar(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Caractéristiques',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            Text(
+                              S.of(context).characteristics, // Utilisation de la traduction
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                             const SizedBox(height: 10),
-                            _buildDetailRow('Année de construction', token['constructionYear']?.toString() ?? 'Non spécifié'),
-                            _buildDetailRow('Nombre d\'étages', token['propertyStories']?.toString() ?? 'Non spécifié'),
-                            _buildDetailRow('Nombre de logements', token['totalUnits']?.toString() ?? 'Non spécifié'),
-                            _buildDetailRow('Taille du terrain', '${token['lotSize']?.toStringAsFixed(2) ?? 'Non spécifié'} sqft'),
-                            _buildDetailRow('Taille intérieure', '${token['squareFeet']?.toStringAsFixed(2) ?? 'Non spécifié'} sqft'),
+                            _buildDetailRow(S.of(context).constructionYear, token['constructionYear']?.toString() ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).propertyStories, token['propertyStories']?.toString() ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).totalUnits, token['totalUnits']?.toString() ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).lotSize, '${token['lotSize']?.toStringAsFixed(2) ?? S.of(context).notSpecified} sqft'),
+                            _buildDetailRow(S.of(context).squareFeet, '${token['squareFeet']?.toStringAsFixed(2) ?? S.of(context).notSpecified} sqft'),
                             const SizedBox(height: 20),
-                            const Text(
-                              'Offering',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            Text(
+                              S.of(context).offering, // Utilisation de la traduction
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                             const SizedBox(height: 10),
-                            _buildDetailRow('Mise en vente', token['initialLaunchDate'] ?? 'Non spécifié'),
-                            _buildDetailRow('Type de location', token['rentalType'] ?? 'Non spécifié'),
-                            _buildDetailRow('Premier loyer', token['rentStartDate'] ?? 'Non spécifié'),
-                            _buildDetailRow('Logements loués', '${token['rentedUnits'] ?? 'Non spécifié'} / ${token['totalUnits'] ?? 'Non spécifié'}'),
+                            _buildDetailRow(S.of(context).initialLaunchDate, token['initialLaunchDate'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).rentalType, token['rentalType'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).rentStartDate, token['rentStartDate'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).rentedUnits, '${token['rentedUnits'] ?? S.of(context).notSpecified} / ${token['totalUnits'] ?? S.of(context).notSpecified}'),
                           ],
                         ),
                       ),
@@ -103,12 +101,12 @@ TabBar(
                       SingleChildScrollView(
                         child: Column(
                           children: [
-                            _buildDetailRow('Valeur de l\'investissement', formatCurrency(token['totalInvestment'] ?? 0)),
-                            _buildDetailRow('Valeur du bien', formatCurrency(token['underlyingAssetPrice'] ?? 0)),
-                            _buildDetailRow('Réserve de maintenance', formatCurrency(token['initialMaintenanceReserve'] ?? 0)),
-                            _buildDetailRow('Loyer brut mensuel', formatCurrency(token['grossRentMonth'] ?? 0)),
-                            _buildDetailRow('Loyer net mensuel', formatCurrency(token['netRentMonth'] ?? 0)),
-                            _buildDetailRow('Rendement annuel', '${token['annualPercentageYield']?.toStringAsFixed(2) ?? 'Non spécifié'}%'),
+                            _buildDetailRow(S.of(context).totalInvestment, formatCurrency(token['totalInvestment'] ?? 0)),
+                            _buildDetailRow(S.of(context).underlyingAssetPrice, formatCurrency(token['underlyingAssetPrice'] ?? 0)),
+                            _buildDetailRow(S.of(context).initialMaintenanceReserve, formatCurrency(token['initialMaintenanceReserve'] ?? 0)),
+                            _buildDetailRow(S.of(context).grossRentMonth, formatCurrency(token['grossRentMonth'] ?? 0)),
+                            _buildDetailRow(S.of(context).netRentMonth, formatCurrency(token['netRentMonth'] ?? 0)),
+                            _buildDetailRow(S.of(context).annualPercentageYield, '${token['annualPercentageYield']?.toStringAsFixed(2) ?? S.of(context).notSpecified}%'),
                           ],
                         ),
                       ),
@@ -118,76 +116,75 @@ TabBar(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Blockchain',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            Text(
+                              S.of(context).blockchain, // Utilisation de la traduction
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                             const SizedBox(height: 10),
-                            _buildDetailRow('Token address', token['ethereumContract'] ?? 'Non spécifié'),
-                            _buildDetailRow('Network', token['blockchainAddresses']?['ethereum']?['chainName'] ?? 'Non spécifié'),
-                            _buildDetailRow('Token Symbol', token['tokenSymbol'] ?? 'Non spécifié'),
-                            _buildDetailRow('Contract Type', token['contractType'] ?? 'Non spécifié'),
+                            _buildDetailRow(S.of(context).tokenAddress, token['ethereumContract'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).network, token['blockchainAddresses']?['ethereum']?['chainName'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).tokenSymbol, token['tokenSymbol'] ?? S.of(context).notSpecified),
+                            _buildDetailRow(S.of(context).contractType, token['contractType'] ?? S.of(context).notSpecified),
                           ],
                         ),
                       ),
                       
                       // Onglet Insights (Graphique de l'évolution du yield et du prix avec pastille de statut de location)
-SingleChildScrollView(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          // Pastille de couleur en fonction du statut de location
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: getRentalStatusColor(
-                token['rentedUnits'] ?? 0, // Nombre de logements loués
-                token['totalUnits'] ?? 1,  // Nombre total de logements
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Text(
-            'Statut de location',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      
-      // Ajout du texte pour indiquer le pourcentage des logements loués
-      Text(
-        'Logements loués : ${token['rentedUnits'] ?? 'Non spécifié'} / ${token['totalUnits'] ?? 'Non spécifié'}',
-        style: const TextStyle(fontSize: 13),
-      ),
+                      SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                // Pastille de couleur en fonction du statut de location
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: getRentalStatusColor(
+                                      token['rentedUnits'] ?? 0, // Nombre de logements loués
+                                      token['totalUnits'] ?? 1,  // Nombre total de logements
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  S.of(context).rentalStatus, // Utilisation de la traduction
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            
+                            // Ajout du texte pour indiquer le pourcentage des logements loués
+                            Text(
+                              '${S.of(context).rentedUnits} : ${token['rentedUnits'] ?? S.of(context).notSpecified} / ${token['totalUnits'] ?? S.of(context).notSpecified}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
 
-      const SizedBox(height: 10),
+                            const SizedBox(height: 10),
 
-      // Graphique du rendement (Yield)
-      const Text(
-        'Évolution du rendement (Yield)',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-      ),
-      const SizedBox(height: 10),
-      _buildYieldChartOrMessage(token['historic']?['yields'] ?? [], token['historic']?['init_yield']),
-      
-      const SizedBox(height: 20),
+                            // Graphique du rendement (Yield)
+                            Text(
+                              S.of(context).yieldEvolution, // Utilisation de la traduction
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildYieldChartOrMessage(context, token['historic']?['yields'] ?? [], token['historic']?['init_yield']),
+                            
+                            const SizedBox(height: 20),
 
-      // Graphique des prix
-      const Text(
-        'Évolution des prix',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-      ),
-      const SizedBox(height: 10),
-      _buildPriceChartOrMessage(token['historic']?['prices'] ?? [], token['historic']?['init_price']),
-    ],
-  ),
-)
-
+                            // Graphique des prix
+                            Text(
+                              S.of(context).priceEvolution, // Utilisation de la traduction
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildPriceChartOrMessage(context, token['historic']?['prices'] ?? [], token['historic']?['init_price']),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -197,15 +194,15 @@ SingleChildScrollView(
                 // Bouton pour voir sur RealT
                 Center(
                   child: SizedBox(
-                    height: 36, // Hauteur réduite du bouton
-                    width: 150, // Optionnel : ajuster la largeur pour un bouton plus petit
+                    height: 36,
+                    width: 150,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16), // Ajuster les marges internes
-                        textStyle: const TextStyle(fontSize: 12), // Taille du texte réduite
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        textStyle: const TextStyle(fontSize: 12),
                       ),
                       onPressed: () => _launchURL(token['marketplaceLink']),
-                      child: const Text('Voir sur RealT'),
+                      child: Text(S.of(context).viewOnRealT), // Utilisation de la traduction
                     ),
                   ),
                 ),
@@ -235,11 +232,11 @@ Widget _buildDetailRow(String label, String value) {
 }
 
 // Méthode pour afficher soit le graphique du yield, soit un message, avec % évolution
-Widget _buildYieldChartOrMessage(List<dynamic> yields, double? initYield) {
+Widget _buildYieldChartOrMessage(BuildContext context, List<dynamic> yields, double? initYield) {
   if (yields.length <= 1) {
     // Afficher le message si une seule donnée est disponible
     return Text(
-      "Pas d'évolution du rendement (yield). La dernière valeur est : ${yields.isNotEmpty ? yields.first['yield'].toStringAsFixed(2) : 'Non spécifié'}",
+      "${S.of(context).noYieldEvolution} ${yields.isNotEmpty ? yields.first['yield'].toStringAsFixed(2) : S.of(context).notSpecified}",
       style: const TextStyle(fontSize: 13),
     );
   } else {
@@ -254,7 +251,7 @@ Widget _buildYieldChartOrMessage(List<dynamic> yields, double? initYield) {
         _buildYieldChart(yields),
         const SizedBox(height: 10),
         Text(
-          "Évolution du rendement : ${percentageChange.toStringAsFixed(2)}%",
+          "${S.of(context).yieldEvolutionPercentage} ${percentageChange.toStringAsFixed(2)}%",
           style: const TextStyle(fontSize: 13),
         ),
       ],
@@ -262,12 +259,13 @@ Widget _buildYieldChartOrMessage(List<dynamic> yields, double? initYield) {
   }
 }
 
+
 // Méthode pour afficher soit le graphique des prix, soit un message, avec % évolution
-Widget _buildPriceChartOrMessage(List<dynamic> prices, double? initPrice) {
+Widget _buildPriceChartOrMessage(BuildContext context, List<dynamic> prices, double? initPrice) {
   if (prices.length <= 1) {
     // Afficher le message si une seule donnée est disponible
     return Text(
-      "Pas d'évolution des prix. Le dernier prix est : ${prices.isNotEmpty ? prices.first['price'].toStringAsFixed(2) : 'Non spécifié'}",
+      "${S.of(context).noPriceEvolution} ${prices.isNotEmpty ? prices.first['price'].toStringAsFixed(2) : S.of(context).notSpecified}",
       style: const TextStyle(fontSize: 13),
     );
   } else {
@@ -282,7 +280,7 @@ Widget _buildPriceChartOrMessage(List<dynamic> prices, double? initPrice) {
         _buildPriceChart(prices),
         const SizedBox(height: 10),
         Text(
-          "Évolution des prix : ${percentageChange.toStringAsFixed(2)}%",
+          "${S.of(context).priceEvolutionPercentage} ${percentageChange.toStringAsFixed(2)}%",
           style: const TextStyle(fontSize: 13),
         ),
       ],

@@ -3,11 +3,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart'; // Import de la bibliothèque intl
 import 'package:url_launcher/url_launcher.dart'; // Import de la bibliothèque url_launcher
 import 'package:RealToken/menu/token_bottom_sheet.dart';
+import '../generated/l10n.dart'; // Import des traductions
 
 // Fonction pour extraire le nom de la ville à partir du fullName
 String extractCity(String fullName) {
   List<String> parts = fullName.split(',');
-  return parts.length >= 2 ? parts[1].trim() : 'Ville inconnue';
+  return parts.length >= 2 ? parts[1].trim() : S.current.unknownCity; // Traduction pour "Ville inconnue"
 }
 
 // Fonction pour déterminer la couleur de la pastille en fonction du taux de location
@@ -141,7 +142,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        token['shortName'] ?? 'Nom indisponible',
+                                        token['shortName'] ?? S.of(context).nameUnavailable, // Traduction pour "Nom indisponible"
                                         style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold),
@@ -161,10 +162,10 @@ class PortfolioDisplay1 extends StatelessWidget {
                                         ),
                                         child: Text(
                                           isWallet
-                                              ? 'Wallet'
+                                              ? S.of(context).wallet // Traduction pour "Wallet"
                                               : isRMM
                                                   ? 'RMM'
-                                                  : 'Other',
+                                                  : S.of(context).other, // Traduction pour "Other"
                                           style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -176,22 +177,22 @@ class PortfolioDisplay1 extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   // Affichage de Amount et Total Tokens
                                   Text(
-                                    'Total Value: ${formatCurrency(token['totalValue'])}',
+                                    '${S.of(context).totalValue}: ${formatCurrency(token['totalValue'])}', // Traduction pour "Total Value"
                                     style: const TextStyle(fontSize: 13),
                                   ),
                                   Text(
-                                    'Amount: ${token['amount']} / ${token['totalTokens']}',
+                                    '${S.of(context).amount}: ${token['amount']} / ${token['totalTokens']}', // Traduction pour "Amount"
                                     style: const TextStyle(fontSize: 13),
                                   ),
                                   // Affichage de l'APY arrondi à 2 chiffres après la virgule
                                   Text(
-                                    'APY: ${token['annualPercentageYield']?.toStringAsFixed(2)}%',
+                                    '${S.of(context).apy}: ${token['annualPercentageYield']?.toStringAsFixed(2)}%', // Traduction pour "APY"
                                     style: const TextStyle(fontSize: 13),
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    'Revenue:',
-                                    style: TextStyle(
+                                  Text(
+                                    '${S.of(context).revenue}:', // Traduction pour "Revenue"
+                                    style: const TextStyle(
                                         fontWeight: FontWeight.bold, fontSize: 13),
                                   ),
                                   Padding(
@@ -202,7 +203,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                       children: [
                                         Column(
                                           children: [
-                                            const Text('Day',
+                                            Text(S.of(context).day, // Traduction pour "Day"
                                                 style: TextStyle(fontSize: 13)),
                                             Text(
                                                 '${formatCurrency(token['dailyIncome'] ?? 0)}',
@@ -212,7 +213,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                         ),
                                         Column(
                                           children: [
-                                            const Text('Month',
+                                            Text(S.of(context).month, // Traduction pour "Month"
                                                 style: TextStyle(fontSize: 13)),
                                             Text(
                                                 '${formatCurrency(token['monthlyIncome'] ?? 0)}',
@@ -222,7 +223,7 @@ class PortfolioDisplay1 extends StatelessWidget {
                                         ),
                                         Column(
                                           children: [
-                                            const Text('Year',
+                                            Text(S.of(context).year, // Traduction pour "Year"
                                                 style: TextStyle(fontSize: 13)),
                                             Text(
                                                 '${formatCurrency(token['yearlyIncome'] ?? 0)}',

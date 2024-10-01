@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Importer pour le copier dans le presse-papiers
-import 'package:url_launcher/url_launcher.dart';  // Pour ouvrir les liens externes
+import 'package:url_launcher/url_launcher.dart'; // Pour ouvrir les liens externes
+import '../generated/l10n.dart'; // Importer pour les traductions
 
 class AboutPage extends StatelessWidget {
   const AboutPage({Key? key}) : super(key: key);
@@ -9,28 +10,28 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About'),
+        title: Text(S.of(context).about), // Traduction pour "About"
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: <Widget>[
             // Section Nom et Version de l'application
-            const SectionHeader(title: 'Application'),
-            const ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text('Nom de l\'application'),
-              subtitle: Text('RealToken App'),
+            SectionHeader(title: S.of(context).application), // Traduction pour "Application"
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: Text(S.of(context).appName), // Traduction pour "Nom de l'application"
+              subtitle: const Text('RealToken App'),
             ),
-            const ListTile(
-              leading: Icon(Icons.verified),
-              title: Text('Version'),
-              subtitle: Text('1.0.0'),
+            ListTile(
+              leading: const Icon(Icons.verified),
+              title: Text(S.of(context).version), // Traduction pour "Version"
+              subtitle: const Text('1.0.0'),
             ),
-            const ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Auteur'),
-              subtitle: Text('Byackee'),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(S.of(context).author), // Traduction pour "Auteur"
+              subtitle: const Text('Byackee'),
             ),
 
             // Padding pour décaler les liens
@@ -57,23 +58,23 @@ class AboutPage extends StatelessWidget {
             const Divider(),
 
             // Section Remerciements
-            const SectionHeader(title: 'Remerciements'),
-            const ListTile(
-              leading: Icon(Icons.favorite),
-              title: Text('Merci à tous ceux qui ont contribué à ce projet.'),
+            SectionHeader(title: S.of(context).thanks), // Traduction pour "Remerciements"
+            ListTile(
+              leading: const Icon(Icons.favorite),
+              title: Text(S.of(context).thankYouMessage), // Traduction pour "Merci à tous ceux qui ont contribué à ce projet"
               subtitle: Text(
-                'Remerciements particuliers à @Sigri, @ehpst, et pitsbi pour leur soutien.',
+                S.of(context).specialThanks, // Traduction pour "Remerciements particuliers à..."
               ),
             ),
             const Divider(),
 
             // Section Donation
-            const SectionHeader(title: 'Faire un don'),
-            const ListTile(
-              leading: Icon(Icons.monetization_on),
-              title: Text('Soutenez le projet'),
+            SectionHeader(title: S.of(context).donate), // Traduction pour "Faire un don"
+            ListTile(
+              leading: const Icon(Icons.monetization_on),
+              title: Text(S.of(context).supportProject), // Traduction pour "Soutenez le projet"
               subtitle: Text(
-                'Si vous aimez cette application et souhaitez soutenir son développement, vous pouvez faire un don.',
+                S.of(context).donationMessage, // Traduction pour "Si vous aimez cette application..."
               ),
             ),
 
@@ -87,7 +88,7 @@ class AboutPage extends StatelessWidget {
                     _launchURL('https://paypal.me/byackee?country.x=FR&locale.x=fr_FR');
                   },
                   icon: const Icon(Icons.payment),
-                  label: const Text('PayPal'),
+                  label: Text(S.of(context).paypal), // Traduction pour "PayPal"
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                   ),
@@ -98,7 +99,7 @@ class AboutPage extends StatelessWidget {
                     _showCryptoAddressDialog(context);
                   },
                   icon: const Icon(Icons.currency_bitcoin),
-                  label: const Text('Crypto'),
+                  label: Text(S.of(context).crypto), // Traduction pour "Crypto"
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                   ),
@@ -111,19 +112,18 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  // Fonction pour afficher une boîte de dialogue avec l'adresse crypto
   void _showCryptoAddressDialog(BuildContext context) {
-    const cryptoAddress = '0x7f57f6ad25c501deb2fcaca863264f593efe31d8';  // Remplacez par votre adresse Ethereum
+    const cryptoAddress = '0x2cb49d04890a98eb89f4f43af96ad01b98b64165';  // Remplacez par votre adresse Ethereum
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Adresse de Donation Crypto'),
+          title: Text(S.of(context).cryptoDonationAddress), // Traduction pour "Adresse de Donation Crypto"
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Envoyez vos donations à l\'adresse suivante :'),
+              Text(S.of(context).sendDonations), // Traduction pour "Envoyez vos donations à l'adresse suivante"
               const SizedBox(height: 10),
               SelectableText(
                 cryptoAddress,
@@ -133,22 +133,20 @@ class AboutPage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Bouton pour copier l'adresse dans le presse-papiers
                   ElevatedButton.icon(
                     onPressed: () {
                       Clipboard.setData(const ClipboardData(text: cryptoAddress)); // Copier l'adresse dans le presse-papiers
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Adresse copiée dans le presse-papiers')),
+                        SnackBar(content: Text(S.of(context).addressCopied)), // Traduction pour "Adresse copiée dans le presse-papiers"
                       );
                     },
                     icon: const Icon(Icons.copy),
-                    label: const Text('Copier'),
+                    label: Text(S.of(context).copy), // Traduction pour "Copier"
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                     ),
                   ),
-                
                 ],
               ),
             ],
@@ -158,7 +156,7 @@ class AboutPage extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Fermer'),
+              child: Text(S.of(context).close), // Traduction pour "Fermer"
             ),
           ],
         );
@@ -166,17 +164,6 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  // Fonction pour ouvrir un portefeuille crypto
-  void _openInWallet(String address) async {
-    final walletUrl = 'ethereum:$address'; // URL pour ouvrir les wallets supportant ce format
-    if (await canLaunch(walletUrl)) {
-      await launch(walletUrl);
-    } else {
-      throw 'Impossible d\'ouvrir le wallet avec l\'adresse $address';
-    }
-  }
-
-  // Fonction pour ouvrir une URL dans le navigateur
   void _launchURL(String url) async {
     if (await canLaunch(url)) {
       await launch(url);
@@ -186,7 +173,6 @@ class AboutPage extends StatelessWidget {
   }
 }
 
-// Widget pour afficher les en-têtes de section
 class SectionHeader extends StatelessWidget {
   final String title;
 
